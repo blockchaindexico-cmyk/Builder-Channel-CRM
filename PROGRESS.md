@@ -8,7 +8,7 @@ This file records **what has changed and what is still pending**. The detailed t
 | **Last updated** | 2026-09-24 |
 | **Current phase** | Building — Milestone A (Foundation) |
 | **Current module** | **M01 — Project Foundation & Platform Core** (in progress) |
-| **Overall progress** | 13 / 183 tasks (7%) |
+| **Overall progress** | 23 / 183 tasks (13%) |
 
 **How to update (after every piece of work)**
 1. Tick the finished task IDs in `BUILD_PLAN.md`.
@@ -25,7 +25,7 @@ Status legend: ⬜ Not started · 🟨 In progress · ✅ Done · ⏸️ Blocked
 
 | # | Module | Status | Tasks done / total | Started | Completed | Notes |
 |---|---|---|---|---|---|---|
-| M01 | Project Foundation & Platform Core | 🟨 In progress | 13 / 28 | 2026-09-24 | – | Proposed defaults for Q-13–Q-15 adopted provisionally |
+| M01 | Project Foundation & Platform Core | 🟨 In progress | 23 / 28 | 2026-09-24 | – | Proposed defaults for Q-13–Q-15 adopted provisionally |
 | M02 | Identity, Access Control & Team Structure | ⬜ Not started | 0 / 21 | – | – | Needs Q-04 |
 | M03 | Builder & Project Management | ⬜ Not started | 0 / 14 | – | – | |
 | M04 | Lead Management Core | ⬜ Not started | 0 / 23 | – | – | Needs Q-01, Q-02, Q-03, Q-05 |
@@ -35,7 +35,7 @@ Status legend: ⬜ Not started · 🟨 In progress · ✅ Done · ⏸️ Blocked
 | M08 | Site Visits, Revisits, Bookings & Closures | ⬜ Not started | 0 / 15 | – | – | Needs Q-09, Q-10, Q-16 |
 | M09 | Billing, Commission & Profit/Loss | ⬜ Not started | 0 / 16 | – | – | Needs Q-11, Q-12, Q-16 |
 | M10 | Dashboards, Reports & Analytics | ⬜ Not started | 0 / 20 | – | – | Needs Q-08, Q-10 |
-| | **Total** | | **13 / 183** | | | |
+| | **Total** | | **23 / 183** | | | |
 
 **Release milestones**
 
@@ -50,10 +50,8 @@ Status legend: ⬜ Not started · 🟨 In progress · ✅ Done · ⏸️ Blocked
 
 ## 2. Pending — Up Next
 
-1. **M01 platform services** — verify S3 uploads/downloads and SMTP delivery end-to-end (M01-14, M01-15), server-action pipeline in a real form (M01-16), `/api/health` (M01-17), security headers/CSP + Dependabot (M01-18).
-2. **M01 UI foundation** — Tailwind/shadcn design system, app shell, shared components, settings shell + organization profile page (M01-19 → M01-24).
-3. **M01 delivery** — Playwright smoke test, CI workflow, production Dockerfile, README/ADRs/runbook (M01-25 → M01-28).
-4. Then **M02 — Identity, Access Control & Team Structure** (needs Q-04; proposed default: multi-level hierarchy supported).
+1. **M01 delivery** — Playwright E2E suite (M01-25), CI workflow incl. `pnpm audit` (M01-26, completes M01-18), production Dockerfile (M01-27), README/ADRs/backup runbook (M01-28).
+2. Then **M02 — Identity, Access Control & Team Structure** (proposed default for Q-04: multi-level reporting hierarchy supported).
 
 ---
 
@@ -63,6 +61,7 @@ Newest first. One entry per meaningful change (feature, fix, refactor, decision,
 
 | Date | Module | Task IDs | Change | Commit / PR |
 |---|---|---|---|---|
+| 2026-09-24 | M01 | M01-14 → M01-17, M01-19 → M01-24 | **Platform services + UI foundation.** S3 storage (presigned PUT/GET, content-type enforcement, CORS) and file service with purposes; SMTP/console/memory e-mail transports + React Email templates + queued delivery; `next-safe-action` pipeline with typed errors; pino logging, request IDs and `/api/health` (DB, storage, worker heartbeat); security headers + nonce-based CSP in `src/proxy.ts`; Dependabot. Tailwind v4 design tokens (light/dark), shadcn-style UI kit, responsive app shell (collapsible sidebar, tablet slide-over), registries (navigation, settings, permissions, extension points), DataTable with URL state (search, sort, paging, filters), DateRangePicker with org-timezone presets, money/date/phone formatters, error/404/403/loading pages. Settings hub, **Organization profile** (company details, logo upload, regional settings, test e-mail) and **System status** (health + domain-event log). **Verified:** 61 unit/integration tests; RustFS + Mailpit integration tests; browser run (Playwright) of save profile → audit + event, logo upload to S3 → sidebar, test e-mail → worker → Mailpit, event-log search/sort/date filter, tablet menu, dark mode, zero console/CSP errors. | `feat(M01): platform services and UI foundation` |
 | 2026-09-24 | M01 | M01-01 → M01-13 | **Platform core.** Next.js 16.3 + pnpm + TS strict; ESLint (tenancy/module-boundary import rules), Prettier, Husky, lint-staged, commitlint; `docker-compose.yml` (PostgreSQL 16, RustFS S3 storage, Mailpit); validated env (`src/config/env.ts`, `.env.example`); Prisma 7 multi-file schema + first migration (`organizations`, `organization_settings`, `sequences`, `audit_logs`, `outbox_events`, `file_objects`, `worker_heartbeats`); tenant-scoped Prisma client with guard (T1–T3); per-org sequences; audit log with field diffs; transactional outbox that enqueues handler jobs in the same transaction; pg-boss worker (`pnpm dev:worker`) with cron jobs and heartbeat; storage/e-mail/server-action groundwork; module template; idempotent seed. **Verified:** lint + typecheck clean; 20 integration tests pass (tenant isolation across two orgs, sequence concurrency & rollback, audit diffs & rollback, outbox commit/rollback, worker execution, transactional enqueue, retries). | `feat(M01): platform core` |
 | 2026-09-24 | Planning | – | Analysed the PRD (32 sections, 13 pages). Split the web-app scope into 10 modules (M01–M10) with goals, data models, business rules, 183 checklist tasks and acceptance criteria. Defined the architecture (modular monolith on Next.js), multi-tenancy rules T1–T10, access-control model, PRD traceability matrix, future phases (F1 multi-tenant SaaS, F2 mobile, F3 integrations) and risks. Created `BUILD_PLAN.md`, `PROGRESS.md`, `README.md`, `CLAUDE.md`. | initial commit |
 

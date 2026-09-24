@@ -115,6 +115,7 @@ model OutboxEvent {
   payload        Json
   actorType      ActorType    @default(SYSTEM) @map("actor_type")
   actorId        String?      @map("actor_id") @db.Uuid
+  actorName      String?      @map("actor_name")
   requestId      String?      @map("request_id")
   /// Names of the handlers the event was dispatched to.
   dispatchedTo   String[]     @map("dispatched_to")

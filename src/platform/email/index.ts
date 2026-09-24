@@ -13,7 +13,9 @@ export {
   setEmailTransportForTesting,
 } from "./transport";
 
-export const EMAIL_SEND_JOB = "platform.email.send";
+import { EMAIL_SEND_JOB } from "./constants";
+
+export { EMAIL_SEND_JOB } from "./constants";
 
 export interface ComposeEmailInput {
   to: string | string[];

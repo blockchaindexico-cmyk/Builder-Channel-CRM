@@ -15,6 +15,7 @@ import {
 } from "@/platform/storage/files";
 import type { ServiceContext } from "@/platform/tenant/context";
 import { clearTenantCache } from "@/platform/tenant/resolve";
+import { parseInput } from "@/platform/validation";
 
 import { ORGANIZATION_PERMISSIONS } from "../permissions";
 import {
@@ -109,6 +110,26 @@ export async function getRegionalSettings(ctx: ServiceContext): Promise<Regional
   };
 }
 
+/** Name and logo for the app shell — visible to every member of the organization. */
+export async function getOrganizationBranding(
+  ctx: ServiceContext,
+): Promise<{ name: string; logoUrl: string | null }> {
+  const organization = await ctx.db.organization.findUnique({
+    where: { id: ctx.organizationId },
+    select: { name: true, settings: { select: { logoFileId: true } } },
+  });
+  if (!organization) throw new NotFoundError("Organization", ctx.organizationId);
+  let logoUrl: string | null = null;
+  const logoFileId = organization.settings?.logoFileId;
+  if (logoFileId) {
+    logoUrl = await getFileDownloadUrl(ctx, logoFileId, {
+      disposition: "inline",
+      expiresInSeconds: 3600,
+    }).catch(() => null);
+  }
+  return { name: organization.name, logoUrl };
+}
+
 export async function getOrganizationProfile(ctx: ServiceContext): Promise<OrganizationProfile> {
   ctx.permissions.assert(ORGANIZATION_PERMISSIONS.view);
   const organization = await ctx.db.organization.findUnique({
@@ -140,7 +161,7 @@ export async function updateOrganizationProfile(
   input: OrganizationProfileInput,
 ): Promise<OrganizationProfileValues> {
   ctx.permissions.assert(ORGANIZATION_PERMISSIONS.manage);
-  const values = organizationProfileSchema.parse(input);
+  const values = parseInput(organizationProfileSchema, input);
 
   const result = await ctx.db.$transaction(async (tx) => {
     const organization = await tx.organization.findUniqueOrThrow({

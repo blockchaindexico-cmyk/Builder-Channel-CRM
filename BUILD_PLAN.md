@@ -468,19 +468,19 @@ the feature modules build on. **No business features.**
 
 *Platform services*
 - [x] **M01-13** Background jobs with pg-boss: worker entrypoint (`src/worker`), job registry, cron schedules, retries, graceful shutdown; `pnpm dev` runs web + worker.
-- [ ] **M01-14** File storage abstraction (S3-compatible) + `FileObject` model; presigned upload/download; `orgs/{orgId}/…` keys; MIME/size validation.
-- [ ] **M01-15** Email abstraction (SMTP / Resend adapters) + React Email base layout; Mailpit in development.
-- [ ] **M01-16** Server-action pipeline (next-safe-action): session → tenant → permission hook → Zod validation → error mapping; typed error classes; standard result shape.
-- [ ] **M01-17** Structured logging (pino) with request IDs; `/api/health` endpoint (DB + storage checks).
+- [x] **M01-14** File storage abstraction (S3-compatible) + `FileObject` model; presigned upload/download; `orgs/{orgId}/…` keys; MIME/size validation.
+- [x] **M01-15** Email abstraction (SMTP / Resend adapters) + React Email base layout; Mailpit in development.
+- [x] **M01-16** Server-action pipeline (next-safe-action): session → tenant → permission hook → Zod validation → error mapping; typed error classes; standard result shape.
+- [x] **M01-17** Structured logging (pino) with request IDs; `/api/health` endpoint (DB + storage checks).
 - [ ] **M01-18** Security baseline: security headers & CSP, strict cookie settings, Dependabot, `pnpm audit` in CI.
 
 *UI foundation*
-- [ ] **M01-19** Tailwind CSS v4 + shadcn/ui; design tokens, light/dark theme, typography, lucide icons, sonner toasts.
-- [ ] **M01-20** App shell: collapsible sidebar, top bar, breadcrumbs, user-menu placeholder; responsive for desktop, laptop and tablet.
-- [ ] **M01-21** Registries: navigation, settings sections, permission catalogue, lead-detail panels, timeline renderers, notification types, metrics, reports.
-- [ ] **M01-22** Shared components: DataTable (server-side pagination/sort/filter, URL state via nuqs), PageHeader, EmptyState, ErrorState, ConfirmDialog, form fields (RHF + Zod), StatusBadge, DateRangePicker (Today / Week / Month / Custom), Money/Phone/Date formatters (org timezone & currency).
-- [ ] **M01-23** Error, not-found and loading states (skeletons).
-- [ ] **M01-24** Settings shell (`/settings`) + Organization profile settings page (name, logo, address, timezone, currency, locale, date format, fiscal year).
+- [x] **M01-19** Tailwind CSS v4 + shadcn/ui; design tokens, light/dark theme, typography, lucide icons, sonner toasts.
+- [x] **M01-20** App shell: collapsible sidebar, top bar, breadcrumbs, user-menu placeholder; responsive for desktop, laptop and tablet.
+- [x] **M01-21** Registries: navigation, settings sections, permission catalogue, lead-detail panels, timeline renderers, notification types, metrics, reports.
+- [x] **M01-22** Shared components: DataTable (server-side pagination/sort/filter, URL state via nuqs), PageHeader, EmptyState, ErrorState, ConfirmDialog, form fields (RHF + Zod), StatusBadge, DateRangePicker (Today / Week / Month / Custom), Money/Phone/Date formatters (org timezone & currency).
+- [x] **M01-23** Error, not-found and loading states (skeletons).
+- [x] **M01-24** Settings shell (`/settings`) + Organization profile settings page (name, logo, address, timezone, currency, locale, date format, fiscal year).
 
 *Quality & delivery*
 - [ ] **M01-25** Vitest (unit + integration against an isolated test database) + test data factories; Playwright smoke test.

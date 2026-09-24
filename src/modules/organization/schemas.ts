@@ -1,7 +1,25 @@
 import { z } from "zod";
 
-const TIMEZONES = new Set([...Intl.supportedValuesOf("timeZone"), "UTC"]);
+/** Modern IANA names that ICU still reports under legacy aliases (e.g. Asia/Calcutta). */
+const PREFERRED_TIMEZONES = [
+  "UTC",
+  "Asia/Kolkata",
+  "Asia/Kathmandu",
+  "Asia/Ho_Chi_Minh",
+  "Asia/Yangon",
+  "Europe/Kyiv",
+];
 const CURRENCIES = new Set(Intl.supportedValuesOf("currency"));
+
+/** True for any timezone the runtime can format with (accepts canonical names and aliases). */
+export function isValidTimezone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export const SUPPORTED_LOCALES = [
   { value: "en-IN", label: "English (India) — 12,34,567.89" },
@@ -78,7 +96,7 @@ export const organizationProfileSchema = z.object({
     .trim()
     .toUpperCase()
     .regex(/^[A-Z]{2}$/, "Use a 2-letter ISO country code, e.g. IN"),
-  timezone: z.string().refine((value) => TIMEZONES.has(value), "Unknown timezone"),
+  timezone: z.string().trim().min(1).refine(isValidTimezone, "Unknown timezone"),
   currency: z
     .string()
     .trim()
@@ -108,7 +126,15 @@ export const completeLogoUploadSchema = z.object({ fileId: z.uuid() });
 export const sendTestEmailSchema = z.object({ to: z.email("Enter a valid e-mail address") });
 
 export function listTimezones(): string[] {
-  return [...TIMEZONES].sort();
+  const legacy = new Set([
+    "Asia/Calcutta",
+    "Asia/Katmandu",
+    "Asia/Saigon",
+    "Asia/Rangoon",
+    "Europe/Kiev",
+  ]);
+  const zones = Intl.supportedValuesOf("timeZone").filter((zone) => !legacy.has(zone));
+  return [...new Set([...zones, ...PREFERRED_TIMEZONES])].sort();
 }
 
 export function listCurrencies(): string[] {

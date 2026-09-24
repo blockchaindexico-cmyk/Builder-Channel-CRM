@@ -38,6 +38,7 @@ export async function publishEvent<TType extends DomainEventType>(
       payload: payload as Prisma.InputJsonValue,
       actorType: ctx.actor.type,
       actorId: ctx.actor.id,
+      actorName: ctx.actor.name,
       requestId: ctx.requestId,
       dispatchedTo: handlers.map((handler) => handler.name),
     },

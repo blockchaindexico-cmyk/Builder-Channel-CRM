@@ -31,25 +31,23 @@ export function getFilePurpose(key: string): FilePurpose {
   return purpose;
 }
 
-/** Keeps a readable, storage-safe file name (letters, digits, dot, dash, underscore). */
+/** Keeps a readable, storage-safe file name (letters, digits, dot, dash, underscore); drops any path. */
 export function sanitizeFileName(fileName: string): string {
-  const trimmed = fileName.trim().replace(/[/\\]/g, "_");
-  const dot = trimmed.lastIndexOf(".");
-  const base = (dot > 0 ? trimmed.slice(0, dot) : trimmed)
-    .normalize("NFKD")
-    .replace(/[^\w.-]+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^[-.]+|[-.]+$/g, "")
-    .slice(0, 80);
-  const extension =
-    dot > 0
-      ? trimmed
-          .slice(dot + 1)
-          .replace(/[^\w]/g, "")
-          .slice(0, 10)
-          .toLowerCase()
-      : "";
-  const safeBase = base || "file";
+  const basename = fileName.trim().split(/[/\\]/).filter(Boolean).pop() ?? "";
+  const match = /^(.*?)(?:\.([A-Za-z0-9]{1,10}))?$/.exec(basename);
+  let base = match?.[1] ?? basename;
+  let extension = match?.[2]?.toLowerCase() ?? "";
+  if (!base && extension) {
+    base = extension;
+    extension = "";
+  }
+  const safeBase =
+    base
+      .normalize("NFKD")
+      .replace(/[^\w.-]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^[-.]+|[-.]+$/g, "")
+      .slice(0, 80) || "file";
   return extension ? `${safeBase}.${extension}` : safeBase;
 }
 

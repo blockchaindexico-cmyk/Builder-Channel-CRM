@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { prisma } from "@/platform/db/client";
-import { EMAIL_SEND_JOB } from "@/platform/email";
+import { EMAIL_SEND_JOB } from "@/platform/email/constants";
 import { getEmailTransport } from "@/platform/email/transport";
 import { defineJob } from "@/platform/jobs/define";
 import type { ServerModule } from "@/platform/registry/server";
