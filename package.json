@@ -2,7 +2,7 @@
   "name": "builder-channel-crm",
   "version": "0.1.0",
   "private": true,
-  "description": "Real-estate channel partner CRM (web) — multi-tenant ready",
+  "description": "Real-estate channel partner CRM (web) \u2014 multi-tenant ready",
   "engines": {
     "node": ">=22.0.0"
   },
@@ -12,7 +12,7 @@
     "dev:worker": "SERVICE_NAME=worker tsx watch --env-file-if-exists=.env src/worker/index.ts",
     "build": "next build",
     "start": "next start",
-    "worker": "SERVICE_NAME=worker tsx src/worker/index.ts",
+    "worker": "SERVICE_NAME=worker tsx --env-file-if-exists=.env src/worker/index.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "next typegen && tsc --noEmit",
@@ -29,7 +29,8 @@
     "db:studio": "prisma studio",
     "services:up": "docker compose up -d",
     "services:down": "docker compose down",
-    "prepare": "husky"
+    "prepare": "husky",
+    "build:worker": "esbuild src/worker/index.ts --bundle --platform=node --target=node22 --format=esm --tsconfig=tsconfig.json --external:pg-native --external:pino-pretty --banner:js=\"import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);\" --outfile=dist/worker/index.mjs --log-level=warning"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1140.0",
@@ -77,6 +78,7 @@
     "@types/react-dom": "^19",
     "concurrently": "^10.0.5",
     "dotenv": "^18.0.3",
+    "esbuild": "^0.28.2",
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
     "eslint-config-prettier": "^10.1.8",

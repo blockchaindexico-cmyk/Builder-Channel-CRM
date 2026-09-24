@@ -1,0 +1,16 @@
+.git
+.github
+.husky
+.next
+node_modules
+coverage
+playwright-report
+test-results
+tests
+docs
+*.md
+.env
+.env.*
+!.env.example
+docker-compose.yml
+src/generated

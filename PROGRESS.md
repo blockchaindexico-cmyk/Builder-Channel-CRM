@@ -6,9 +6,9 @@ This file records **what has changed and what is still pending**. The detailed t
 | | |
 |---|---|
 | **Last updated** | 2026-09-24 |
-| **Current phase** | Building — Milestone A (Foundation) |
-| **Current module** | **M01 — Project Foundation & Platform Core** (in progress) |
-| **Overall progress** | 23 / 183 tasks (13%) |
+| **Current phase** | Building — Milestone A (Foundation): M01 done, M02 next |
+| **Current module** | **M02 — Identity, Access Control & Team Structure** (next) |
+| **Overall progress** | 28 / 183 tasks (15%) |
 
 **How to update (after every piece of work)**
 1. Tick the finished task IDs in `BUILD_PLAN.md`.
@@ -25,7 +25,7 @@ Status legend: ⬜ Not started · 🟨 In progress · ✅ Done · ⏸️ Blocked
 
 | # | Module | Status | Tasks done / total | Started | Completed | Notes |
 |---|---|---|---|---|---|---|
-| M01 | Project Foundation & Platform Core | 🟨 In progress | 23 / 28 | 2026-09-24 | – | Proposed defaults for Q-13–Q-15 adopted provisionally |
+| M01 | Project Foundation & Platform Core | ✅ Done | 28 / 28 | 2026-09-24 | 2026-09-24 | Proposed defaults for Q-13–Q-15 adopted provisionally; CI workflow verified locally, first GitHub run on the next PR |
 | M02 | Identity, Access Control & Team Structure | ⬜ Not started | 0 / 21 | – | – | Needs Q-04 |
 | M03 | Builder & Project Management | ⬜ Not started | 0 / 14 | – | – | |
 | M04 | Lead Management Core | ⬜ Not started | 0 / 23 | – | – | Needs Q-01, Q-02, Q-03, Q-05 |
@@ -35,13 +35,13 @@ Status legend: ⬜ Not started · 🟨 In progress · ✅ Done · ⏸️ Blocked
 | M08 | Site Visits, Revisits, Bookings & Closures | ⬜ Not started | 0 / 15 | – | – | Needs Q-09, Q-10, Q-16 |
 | M09 | Billing, Commission & Profit/Loss | ⬜ Not started | 0 / 16 | – | – | Needs Q-11, Q-12, Q-16 |
 | M10 | Dashboards, Reports & Analytics | ⬜ Not started | 0 / 20 | – | – | Needs Q-08, Q-10 |
-| | **Total** | | **23 / 183** | | | |
+| | **Total** | | **28 / 183** | | | |
 
 **Release milestones**
 
 | Milestone | Modules | Status |
 |---|---|---|
-| A — Foundation | M01–M02 | 🟨 |
+| A — Foundation | M01–M02 | 🟨 (M01 ✅) |
 | B — Lead Operations MVP | M03–M05 | ⬜ |
 | C — Sales Execution | M06–M08 | ⬜ |
 | D — Business Insight (v1.0) | M09–M10 | ⬜ |
@@ -50,8 +50,9 @@ Status legend: ⬜ Not started · 🟨 In progress · ✅ Done · ⏸️ Blocked
 
 ## 2. Pending — Up Next
 
-1. **M01 delivery** — Playwright E2E suite (M01-25), CI workflow incl. `pnpm audit` (M01-26, completes M01-18), production Dockerfile (M01-27), README/ADRs/backup runbook (M01-28).
-2. Then **M02 — Identity, Access Control & Team Structure** (proposed default for Q-04: multi-level reporting hierarchy supported).
+1. **M02 — Identity, Access Control & Team Structure** (M02-01 → M02-21): Better Auth login/logout/reset, users & memberships, roles & permissions with OWN/TEAM/ALL data scopes, reporting hierarchy, profile, audit-log viewer. Proposed default for Q-04 (multi-level hierarchy supported) is adopted unless the business decides otherwise.
+2. Replace the M01 single-tenant bootstrap actor (full permissions, no login) with the signed-in user — this is the first thing M02 does.
+3. Open a pull request so the GitHub Actions workflow runs for the first time (all its steps were executed locally).
 
 ---
 
@@ -61,6 +62,7 @@ Newest first. One entry per meaningful change (feature, fix, refactor, decision,
 
 | Date | Module | Task IDs | Change | Commit / PR |
 |---|---|---|---|---|
+| 2026-09-24 | M01 | M01-18, M01-25 → M01-28 | **M01 complete.** Playwright E2E suite (15 tests, desktop + tablet: smoke/security headers/health/404, organization profile save + validation, logo upload/remove, test e-mail, event-log search/sort/date filter, navigation incl. persisted sidebar state); GitHub Actions CI (lint, format, typecheck, `pnpm audit`, Vitest, build, E2E on real PostgreSQL/RustFS/Mailpit, Docker builds); Dockerfile with `web` (standalone, ~340 MB), `worker` (single esbuild bundle, ~250 MB) and `migrate` targets; README setup guide, ADRs 0001–0004, deployment and backup/restore runbooks. **Fixes found while verifying:** server layout read a constant exported from a client module (sidebar cookie ignored); `SKIP_ENV_VALIDATION` dropped env defaults and crashed the production build; prisma config required `DATABASE_URL` for `generate`; CSP/HSTS now depend on an HTTPS `APP_URL`; audit findings in Prisma CLI transitive deps fixed with overrides. **Verified:** lint/format/typecheck clean, 64 unit + integration tests, 15 E2E tests against both dev and production builds, web and worker containers run against local services (health OK, queued e-mail delivered by the containerized worker). | `feat(M01): e2e tests, CI, Docker images and docs` |
 | 2026-09-24 | M01 | M01-14 → M01-17, M01-19 → M01-24 | **Platform services + UI foundation.** S3 storage (presigned PUT/GET, content-type enforcement, CORS) and file service with purposes; SMTP/console/memory e-mail transports + React Email templates + queued delivery; `next-safe-action` pipeline with typed errors; pino logging, request IDs and `/api/health` (DB, storage, worker heartbeat); security headers + nonce-based CSP in `src/proxy.ts`; Dependabot. Tailwind v4 design tokens (light/dark), shadcn-style UI kit, responsive app shell (collapsible sidebar, tablet slide-over), registries (navigation, settings, permissions, extension points), DataTable with URL state (search, sort, paging, filters), DateRangePicker with org-timezone presets, money/date/phone formatters, error/404/403/loading pages. Settings hub, **Organization profile** (company details, logo upload, regional settings, test e-mail) and **System status** (health + domain-event log). **Verified:** 61 unit/integration tests; RustFS + Mailpit integration tests; browser run (Playwright) of save profile → audit + event, logo upload to S3 → sidebar, test e-mail → worker → Mailpit, event-log search/sort/date filter, tablet menu, dark mode, zero console/CSP errors. | `feat(M01): platform services and UI foundation` |
 | 2026-09-24 | M01 | M01-01 → M01-13 | **Platform core.** Next.js 16.3 + pnpm + TS strict; ESLint (tenancy/module-boundary import rules), Prettier, Husky, lint-staged, commitlint; `docker-compose.yml` (PostgreSQL 16, RustFS S3 storage, Mailpit); validated env (`src/config/env.ts`, `.env.example`); Prisma 7 multi-file schema + first migration (`organizations`, `organization_settings`, `sequences`, `audit_logs`, `outbox_events`, `file_objects`, `worker_heartbeats`); tenant-scoped Prisma client with guard (T1–T3); per-org sequences; audit log with field diffs; transactional outbox that enqueues handler jobs in the same transaction; pg-boss worker (`pnpm dev:worker`) with cron jobs and heartbeat; storage/e-mail/server-action groundwork; module template; idempotent seed. **Verified:** lint + typecheck clean; 20 integration tests pass (tenant isolation across two orgs, sequence concurrency & rollback, audit diffs & rollback, outbox commit/rollback, worker execution, transactional enqueue, retries). | `feat(M01): platform core` |
 | 2026-09-24 | Planning | – | Analysed the PRD (32 sections, 13 pages). Split the web-app scope into 10 modules (M01–M10) with goals, data models, business rules, 183 checklist tasks and acceptance criteria. Defined the architecture (modular monolith on Next.js), multi-tenancy rules T1–T10, access-control model, PRD traceability matrix, future phases (F1 multi-tenant SaaS, F2 mobile, F3 integrations) and risks. Created `BUILD_PLAN.md`, `PROGRESS.md`, `README.md`, `CLAUDE.md`. | initial commit |
@@ -82,6 +84,7 @@ Newest first. One entry per meaningful change (feature, fix, refactor, decision,
 | D-009 | 2026-09-24 | Build order M01 → M10 (foundation first, features on top) | Each module depends only on earlier ones | Accepted |
 | D-010 | 2026-09-24 | Local S3-compatible storage uses **RustFS** instead of MinIO | MinIO community Docker images are no longer published; any S3 API works (AWS S3 / R2 in production) | Accepted |
 | D-011 | 2026-09-24 | Event dispatch = outbox row + one pg-boss job per subscribed handler, **enqueued inside the same transaction** (pg-boss `fromPrisma` adapter) instead of a polling relay | Exactly the committed events are dispatched, with per-handler retries and no relay process | Accepted |
+| D-013 | 2026-09-24 | The worker ships as one self-contained esbuild bundle (`pnpm build:worker`); migrations/seed run from a separate `migrate` image | Worker image drops from ~3 GB to ~250 MB; the Prisma CLI is only needed for release tasks | Accepted |
 | D-012 | 2026-09-24 | Proposed defaults for Q-13 (INR / Asia/Kolkata / en-IN, stored as org settings), Q-14 (Docker + managed Postgres, SMTP) and Q-15 (daily backups + PITR) adopted provisionally so M01 can proceed | Product owner asked to start building; all three are configuration, easy to change | Accepted (provisional) |
 
 ---
@@ -116,4 +119,5 @@ Questions for the business. A module should not start until the questions it nee
 | ID | Date | Module | Description | Status |
 |---|---|---|---|---|
 | KI-001 | 2026-09-24 | M01 | The shadcn/ui registry (ui.shadcn.com) is blocked in the build sandbox, so UI primitives are authored by hand following the shadcn source; `components.json` is included so `pnpm dlx shadcn add` works in a normal environment. | Accepted |
+| KI-003 | 2026-09-24 | M01 | `pnpm audit` flagged `mysql2` and `deepmerge-ts` inside the Prisma CLI dependency tree (unused MySQL/config paths). Patched versions are forced via `overrides` in `pnpm-workspace.yaml`; remove them once Prisma ships updated dependencies. | Mitigated |
 | KI-002 | 2026-09-24 | M01 | `@playwright/test` is pinned to 1.56.1 to match the browsers pre-installed in the build sandbox. Upgrade freely where browsers can be downloaded (CI installs its own). | Open |

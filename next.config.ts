@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
-const isProduction = process.env.NODE_ENV === "production";
+/** HSTS only makes sense when the app is actually served over HTTPS. */
+const servedOverHttps = process.env.APP_URL?.startsWith("https://") ?? false;
 
 /** Security headers applied to every response (M01-18). CSP is set per request in `src/proxy.ts`. */
 const securityHeaders = [
@@ -12,13 +13,15 @@ const securityHeaders = [
     value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()",
   },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-  ...(isProduction
+  ...(servedOverHttps
     ? [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" }]
     : []),
 ];
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Keep the dev-tools badge away from the sidebar's collapse control (bottom-left).
+  devIndicators: { position: "bottom-right" },
   reactStrictMode: true,
   // Produces a self-contained server bundle for the Docker image (M01-27).
   output: "standalone",

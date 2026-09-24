@@ -8,12 +8,15 @@ export interface CspOptions {
   isDev: boolean;
   /** Origins the browser talks to directly, e.g. the S3 endpoint for presigned uploads/downloads. */
   storageOrigins?: readonly string[];
+  /** Adds `upgrade-insecure-requests` — only when the app is served over HTTPS. */
+  upgradeInsecureRequests?: boolean;
 }
 
 export function buildContentSecurityPolicy({
   nonce,
   isDev,
   storageOrigins = [],
+  upgradeInsecureRequests = false,
 }: CspOptions): string {
   const storage = storageOrigins.join(" ");
   const directives: Record<string, string> = {
@@ -30,7 +33,7 @@ export function buildContentSecurityPolicy({
     "frame-ancestors": "'none'",
   };
   const policy = Object.entries(directives).map(([name, value]) => `${name} ${value}`);
-  if (!isDev) policy.push("upgrade-insecure-requests");
+  if (upgradeInsecureRequests) policy.push("upgrade-insecure-requests");
   return policy.join("; ");
 }
 

@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 
-import { AppShell, SIDEBAR_COOKIE } from "@/components/shared/app-shell/app-shell";
+import { AppShell } from "@/components/shared/app-shell/app-shell";
+import { SIDEBAR_COOKIE } from "@/components/shared/app-shell/constants";
 import { RegionalSettingsProvider } from "@/components/shared/regional-settings";
 import { getOrganizationBranding, getRegionalSettings } from "@/modules/organization";
 import { getRequestContext } from "@/platform/tenant/request-context";

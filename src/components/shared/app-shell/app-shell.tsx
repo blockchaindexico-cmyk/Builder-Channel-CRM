@@ -15,11 +15,10 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
+import { SIDEBAR_COOKIE } from "./constants";
 import { NavLinks } from "./nav-links";
 import { ThemeToggle } from "./theme-toggle";
 import { type ShellUser, UserMenu } from "./user-menu";
-
-export const SIDEBAR_COOKIE = "crm_sidebar_collapsed";
 
 export interface AppShellProps {
   organization: { name: string; logoUrl: string | null };

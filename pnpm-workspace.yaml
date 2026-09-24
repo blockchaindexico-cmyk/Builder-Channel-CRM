@@ -5,3 +5,7 @@ onlyBuiltDependencies:
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
+overrides:
+  # Security: transitive dependencies of the Prisma CLI flagged by `pnpm audit` (see PROGRESS.md KI-003).
+  mysql2: ">=3.23.1"
+  deepmerge-ts: ">=8.0.0"

@@ -24,6 +24,7 @@ export function proxy(request: NextRequest) {
       nonce,
       isDev: process.env.NODE_ENV === "development",
       storageOrigins: storageOriginsFromEnv(process.env),
+      upgradeInsecureRequests: process.env.APP_URL?.startsWith("https://") ?? false,
     });
     requestHeaders.set("x-nonce", nonce);
     requestHeaders.set("Content-Security-Policy", csp);

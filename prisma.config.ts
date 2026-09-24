@@ -1,6 +1,8 @@
 import "dotenv/config";
 
-import { defineConfig, env } from "prisma/config";
+import { defineConfig } from "prisma/config";
+
+const databaseUrl = process.env.DATABASE_URL;
 
 export default defineConfig({
   // Multi-file schema: one file per module (BUILD_PLAN §2.3).
@@ -9,7 +11,6 @@ export default defineConfig({
     path: "prisma/migrations",
     seed: "tsx prisma/seed/index.ts",
   },
-  datasource: {
-    url: env("DATABASE_URL"),
-  },
+  // Optional so `prisma generate` works without a database (e.g. Docker builds); migrate commands need it.
+  ...(databaseUrl ? { datasource: { url: databaseUrl } } : {}),
 });

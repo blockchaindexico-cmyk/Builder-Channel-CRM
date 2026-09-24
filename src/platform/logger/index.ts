@@ -27,7 +27,7 @@ function createDevStream(): DestinationStream | undefined {
 function createLogger(): Logger {
   return pino(
     {
-      level: env.LOG_LEVEL,
+      level: env.LOG_LEVEL ?? "info",
       base: { service: process.env.SERVICE_NAME ?? "web" },
       timestamp: pino.stdTimeFunctions.isoTime,
       redact: {

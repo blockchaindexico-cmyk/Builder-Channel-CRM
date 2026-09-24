@@ -472,7 +472,7 @@ the feature modules build on. **No business features.**
 - [x] **M01-15** Email abstraction (SMTP / Resend adapters) + React Email base layout; Mailpit in development.
 - [x] **M01-16** Server-action pipeline (next-safe-action): session → tenant → permission hook → Zod validation → error mapping; typed error classes; standard result shape.
 - [x] **M01-17** Structured logging (pino) with request IDs; `/api/health` endpoint (DB + storage checks).
-- [ ] **M01-18** Security baseline: security headers & CSP, strict cookie settings, Dependabot, `pnpm audit` in CI.
+- [x] **M01-18** Security baseline: security headers & CSP, strict cookie settings, Dependabot, `pnpm audit` in CI.
 
 *UI foundation*
 - [x] **M01-19** Tailwind CSS v4 + shadcn/ui; design tokens, light/dark theme, typography, lucide icons, sonner toasts.
@@ -483,10 +483,10 @@ the feature modules build on. **No business features.**
 - [x] **M01-24** Settings shell (`/settings`) + Organization profile settings page (name, logo, address, timezone, currency, locale, date format, fiscal year).
 
 *Quality & delivery*
-- [ ] **M01-25** Vitest (unit + integration against an isolated test database) + test data factories; Playwright smoke test.
-- [ ] **M01-26** GitHub Actions CI: install → lint → typecheck → test (Postgres service) → build → E2E smoke.
-- [ ] **M01-27** Production Dockerfile with `web` and `worker` targets.
-- [ ] **M01-28** Docs: README setup guide; ADR-001 (stack), ADR-002 (multi-tenancy); backup & restore runbook (PRD §27).
+- [x] **M01-25** Vitest (unit + integration against an isolated test database) + test data factories; Playwright smoke test.
+- [x] **M01-26** GitHub Actions CI: install → lint → typecheck → test (Postgres service) → build → E2E smoke.
+- [x] **M01-27** Production Dockerfile with `web`, `worker` (self-contained bundle) and `migrate` targets.
+- [x] **M01-28** Docs: README setup guide; ADR-001 (stack), ADR-002 (multi-tenancy); backup & restore runbook (PRD §27).
 
 **Acceptance criteria**
 - A new developer can clone, run `docker compose up` + `pnpm dev`, and see the app shell with the settings page working.
