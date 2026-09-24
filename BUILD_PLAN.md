@@ -217,7 +217,7 @@ Versions are the latest stable at planning time; **pin exact versions in M01** a
 | Auth | **Better Auth** (email + password, DB sessions) | Self-hosted, password reset, rate limiting, organization-aware sessions |
 | Mutations | next-safe-action | Typed actions with middleware (auth → tenant → permission → validation) |
 | Background jobs | **pg-boss** (Postgres-backed queue) + separate worker process | Reminders, digests, imports, exports — no Redis needed |
-| Files | S3-compatible storage (AWS S3 / Cloudflare R2; MinIO locally) | Presigned URLs, private buckets, tenant-prefixed keys |
+| Files | S3-compatible storage (AWS S3 / Cloudflare R2; RustFS locally) | Presigned URLs, private buckets, tenant-prefixed keys |
 | Email | React Email + provider adapter (SMTP / Resend); Mailpit locally | Transactional emails & digests |
 | PDF / Excel | @react-pdf/renderer, exceljs | Invoices, report exports |
 | Utilities | date-fns / date-fns-tz, decimal.js, libphonenumber-js, uuid (v7) | Timezones, money, phone normalization, sortable IDs |
@@ -378,7 +378,7 @@ super-admin console, PostgreSQL **Row-Level Security** as defense-in-depth, per-
 
 | Environment | Purpose | Notes |
 |---|---|---|
-| Local | Development | `docker compose up` (Postgres, MinIO, Mailpit) + `pnpm dev` (web + worker) |
+| Local | Development | `docker compose up` (Postgres, RustFS S3 storage, Mailpit) + `pnpm dev` (web + worker) |
 | CI | Pull-request checks | GitHub Actions with a Postgres service container |
 | Staging | UAT with business users | Same images as production, anonymized/seeded data |
 | Production | Live | Managed PostgreSQL with automated backups + point-in-time recovery, S3 bucket, web + worker containers |
@@ -451,23 +451,23 @@ the feature modules build on. **No business features.**
 **Checklist**
 
 *Repository & tooling*
-- [ ] **M01-01** Initialize Next.js 16 (App Router, TypeScript strict, `src/` dir, Turbopack) with pnpm; pin Node 22 via `.nvmrc` and `engines`.
-- [ ] **M01-02** ESLint (flat config, Next + TypeScript rules, import ordering, `no-restricted-imports` banning the raw Prisma client in modules), Prettier (+ Tailwind plugin), EditorConfig.
-- [ ] **M01-03** Husky + lint-staged + commitlint (Conventional Commits, scope = module id, e.g. `feat(M04): ...`).
-- [ ] **M01-04** Folder structure per §2.3, including a module template (`src/modules/_template`).
-- [ ] **M01-05** Type-safe environment validation (`src/config/env.ts`) and `.env.example`.
-- [ ] **M01-06** Docker Compose for PostgreSQL, MinIO (S3) and Mailpit; `pnpm services:up|down` scripts.
+- [x] **M01-01** Initialize Next.js 16 (App Router, TypeScript strict, `src/` dir, Turbopack) with pnpm; pin Node 22 via `.nvmrc` and `engines`.
+- [x] **M01-02** ESLint (flat config, Next + TypeScript rules, import ordering, `no-restricted-imports` banning the raw Prisma client in modules), Prettier (+ Tailwind plugin), EditorConfig.
+- [x] **M01-03** Husky + lint-staged + commitlint (Conventional Commits, scope = module id, e.g. `feat(M04): ...`).
+- [x] **M01-04** Folder structure per §2.3, including a module template (`src/modules/_template`).
+- [x] **M01-05** Type-safe environment validation (`src/config/env.ts`) and `.env.example`.
+- [x] **M01-06** Docker Compose for PostgreSQL, RustFS (S3-compatible; MinIO community images are no longer published) and Mailpit; `pnpm services:up|down` scripts.
 
 *Database & tenancy*
-- [ ] **M01-07** Prisma 7 setup (multi-file schema, `prisma.config.ts`, pg driver adapter); base conventions (UUIDv7 ids, timestamps, soft delete).
-- [ ] **M01-08** `Organization` + `OrganizationSetting` models (timezone, currency, locale, date format, fiscal-year start, branding); seed the default organization.
-- [ ] **M01-09** Tenant context (`getTenantContext()`) + tenant-scoped DB accessor with guard extension; integration tests proving isolation between two organizations.
-- [ ] **M01-10** Per-organization `Sequence` service (transactional, gap-tolerant) for human-readable numbers.
-- [ ] **M01-11** `AuditLog` model + `audit.record()` helper (actor, action, entity, before/after diff, IP, user agent).
-- [ ] **M01-12** Transactional outbox (`OutboxEvent`), typed domain-event catalogue and dispatcher with idempotent handlers.
+- [x] **M01-07** Prisma 7 setup (multi-file schema, `prisma.config.ts`, pg driver adapter); base conventions (UUIDv7 ids, timestamps, soft delete).
+- [x] **M01-08** `Organization` + `OrganizationSetting` models (timezone, currency, locale, date format, fiscal-year start, branding); seed the default organization.
+- [x] **M01-09** Tenant context (`getTenantContext()`) + tenant-scoped DB accessor with guard extension; integration tests proving isolation between two organizations.
+- [x] **M01-10** Per-organization `Sequence` service (transactional, gap-tolerant) for human-readable numbers.
+- [x] **M01-11** `AuditLog` model + `audit.record()` helper (actor, action, entity, before/after diff, IP, user agent).
+- [x] **M01-12** Transactional outbox (`OutboxEvent`), typed domain-event catalogue and dispatcher with idempotent handlers.
 
 *Platform services*
-- [ ] **M01-13** Background jobs with pg-boss: worker entrypoint (`src/worker`), job registry, cron schedules, retries, graceful shutdown; `pnpm dev` runs web + worker.
+- [x] **M01-13** Background jobs with pg-boss: worker entrypoint (`src/worker`), job registry, cron schedules, retries, graceful shutdown; `pnpm dev` runs web + worker.
 - [ ] **M01-14** File storage abstraction (S3-compatible) + `FileObject` model; presigned upload/download; `orgs/{orgId}/…` keys; MIME/size validation.
 - [ ] **M01-15** Email abstraction (SMTP / Resend adapters) + React Email base layout; Mailpit in development.
 - [ ] **M01-16** Server-action pipeline (next-safe-action): session → tenant → permission hook → Zod validation → error mapping; typed error classes; standard result shape.
@@ -491,7 +491,7 @@ the feature modules build on. **No business features.**
 **Acceptance criteria**
 - A new developer can clone, run `docker compose up` + `pnpm dev`, and see the app shell with the settings page working.
 - A sample job and a sample domain event run end-to-end through the worker.
-- File upload/download works against MinIO with tenant-prefixed keys.
+- File upload/download works against the local S3 store (RustFS) with tenant-prefixed keys.
 - The tenant isolation test suite passes; CI is green on the main branch.
 
 ---

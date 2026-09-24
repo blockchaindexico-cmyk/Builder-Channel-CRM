@@ -1,0 +1,15 @@
+// Generator + datasource. Models live in one file per module (platform, identity, catalog, leads, ...).
+// Conventions (BUILD_PLAN §2.4 / §2.6):
+//   * UUIDv7 primary keys, `timestamptz` timestamps, snake_case table/column names.
+//   * Every tenant-owned model has `organizationId` (T1) and per-tenant unique constraints (T2).
+//   * Child tables reference tenant parents with composite keys (organizationId, parentId) so a row can
+//     never point at another tenant's data.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}

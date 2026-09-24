@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+@AGENTS.md
+
 Guidance for AI-assisted development sessions in this repository.
 
 ## Before starting work
