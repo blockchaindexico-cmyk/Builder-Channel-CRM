@@ -26,6 +26,11 @@ env:
   SMTP_HOST: localhost
   SMTP_PORT: "1025"
   NEXT_TELEMETRY_DISABLED: "1"
+  BETTER_AUTH_SECRET: ci-only-secret-0123456789abcdef0123456789
+  SEED_ADMIN_NAME: Asha Admin
+  SEED_ADMIN_EMAIL: admin@demo-realty.test
+  SEED_ADMIN_PASSWORD: ChangeMe123!
+  SEED_DEMO_USERS: "true"
 
 jobs:
   quality:
@@ -109,7 +114,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
       - run: pnpm db:deploy
+      # Demo manager/executives are never seeded with NODE_ENV=production; the e2e personas need them.
       - run: pnpm db:seed
+        env:
+          NODE_ENV: test
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium
       - name: Run end-to-end tests

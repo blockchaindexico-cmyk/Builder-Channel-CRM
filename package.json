@@ -2,7 +2,7 @@
   "name": "builder-channel-crm",
   "version": "0.1.0",
   "private": true,
-  "description": "Real-estate channel partner CRM (web) \u2014 multi-tenant ready",
+  "description": "Real-estate channel partner CRM (web) — multi-tenant ready",
   "engines": {
     "node": ">=22.0.0"
   },
@@ -42,6 +42,7 @@
     "@react-email/components": "^1.0.12",
     "@t3-oss/env-nextjs": "^0.13.11",
     "@tanstack/react-table": "^8.21.3",
+    "better-auth": "1.7.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",

@@ -55,3 +55,6 @@ next-env.d.ts
 
 # bundled worker
 /dist/
+
+# playwright sessions (e2e auth setup)
+/tests/e2e/.auth/

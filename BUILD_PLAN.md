@@ -518,35 +518,35 @@ hierarchy, profile management and an audit log viewer.
 **Checklist**
 
 *Authentication*
-- [ ] **M02-01** Better Auth integration: email + password, database sessions, secure httpOnly cookies, session expiry & rolling refresh.
-- [ ] **M02-02** Auth schema (`User`, `Session`, `Account`, `Verification`) + `Membership`; active organization stored on the session.
-- [ ] **M02-03** Login page, logout, session-expired handling; route protection in `proxy.ts` **and** server-side checks in every page/action.
-- [ ] **M02-04** Forgot/reset password (emailed token, expiry, single use); change password; password policy.
-- [ ] **M02-05** Rate limiting and temporary lockout on repeated failures; audit login success/failure, logout, password reset.
+- [x] **M02-01** Better Auth integration: email + password, database sessions, secure httpOnly cookies, session expiry & rolling refresh.
+- [x] **M02-02** Auth schema (`User`, `Session`, `Account`, `Verification`) + `Membership`; active organization stored on the session.
+- [x] **M02-03** Login page, logout, session-expired handling; route protection in `proxy.ts` **and** server-side checks in every page/action.
+- [x] **M02-04** Forgot/reset password (emailed token, expiry, single use); change password; password policy.
+- [x] **M02-05** Rate limiting and temporary lockout on repeated failures; audit login success/failure, logout, password reset.
 
 *Authorization*
-- [ ] **M02-06** Permission catalogue (keys declared per module) + `Role` / `RolePermission`; seed Admin, Manager, Executive with the defaults from §1.2.
-- [ ] **M02-07** Authorization helpers: `can()`, `assertCan()`, `<Can>` UI gate, permission-aware navigation.
-- [ ] **M02-08** Data-scope resolver (`OWN` / `TEAM` / `ALL`) returning Prisma filters; reporting-tree resolution (recursive CTE, per-request cache).
-- [ ] **M02-09** Roles & permissions UI (Admin): view roles, edit role permissions and scopes, create custom roles.
+- [x] **M02-06** Permission catalogue (keys declared per module) + `Role` / `RolePermission`; seed Admin, Manager, Executive with the defaults from §1.2.
+- [x] **M02-07** Authorization helpers: `can()`, `assertCan()`, `<Can>` UI gate, permission-aware navigation.
+- [x] **M02-08** Data-scope resolver (`OWN` / `TEAM` / `ALL`) returning Prisma filters; reporting-tree resolution (recursive CTE, per-request cache).
+- [x] **M02-09** Roles & permissions UI (Admin): view roles, edit role permissions and scopes, create custom roles.
 
 *User & team management*
-- [ ] **M02-10** Users list (search; filter by role, status, manager) + create user (name, email, mobile, role, reports-to, employee code, designation) with set-password email.
-- [ ] **M02-11** Edit user, change role, change reporting manager (audited).
-- [ ] **M02-12** Activate/deactivate user (revoke sessions, block login; lead reassignment wizard is added in M05).
-- [ ] **M02-13** Admin-triggered password reset and resend invitation.
-- [ ] **M02-14** Team structure view (manager → executives tree); managers see their own team read-only.
+- [x] **M02-10** Users list (search; filter by role, status, manager) + create user (name, email, mobile, role, reports-to, employee code, designation) with set-password email.
+- [x] **M02-11** Edit user, change role, change reporting manager (audited).
+- [x] **M02-12** Activate/deactivate user (revoke sessions, block login; lead reassignment wizard is added in M05).
+- [x] **M02-13** Admin-triggered password reset and resend invitation.
+- [x] **M02-14** Team structure view (manager → executives tree); managers see their own team read-only.
 
 *Profile (PRD §21)*
-- [ ] **M02-15** Profile page: name, mobile, email, avatar upload, role and reporting information (read-only).
-- [ ] **M02-16** Security tab: change password, active sessions list, sign out other sessions.
-- [ ] **M02-17** Profile placeholders for notification preferences (filled by M06) and activity summary (filled by M10).
+- [x] **M02-15** Profile page: name, mobile, avatar upload; email, role and reporting information read-only (the e-mail is the login identity, D-015).
+- [x] **M02-16** Security tab: change password, active sessions list, sign out other sessions.
+- [x] **M02-17** Profile placeholders for notification preferences (filled by M06) and activity summary (filled by M10).
 
 *Admin, seed & tests*
-- [ ] **M02-18** Audit log viewer (Admin): filter by user, action, entity and date; before/after diff view.
-- [ ] **M02-19** Seed: first Admin from environment variables; demo Manager and Executives for development.
-- [ ] **M02-20** E2E tests: login, logout, forgot/reset password, deactivated user blocked, role-based navigation.
-- [ ] **M02-21** Integration tests: permission matrix, data scope per role, multi-level hierarchy, last-admin protection.
+- [x] **M02-18** Audit log viewer (Admin): filter by user, action, entity and date; before/after diff view.
+- [x] **M02-19** Seed: first Admin from environment variables; demo Manager and Executives for development.
+- [x] **M02-20** E2E tests: login, logout, forgot/reset password, deactivated user blocked, role-based navigation.
+- [x] **M02-21** Integration tests: permission matrix, data scope per role, multi-level hierarchy, last-admin protection.
 
 **Acceptance criteria**
 - Admin, Manager and Executive can log in and see only the navigation and data their role allows.

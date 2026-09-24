@@ -31,6 +31,8 @@ export interface DataTableProps<TData> {
   toolbar?: (table: ReturnType<typeof useReactTable<TData>>) => ReactNode;
   emptyState?: ReactNode;
   getRowId?: (row: TData) => string;
+  /** Column ids hidden until the user shows them from the "Columns" menu. */
+  initiallyHiddenColumns?: readonly string[];
   className?: string;
 }
 
@@ -51,6 +53,7 @@ export function DataTable<TData>({
   toolbar,
   emptyState,
   getRowId,
+  initiallyHiddenColumns,
   className,
 }: DataTableProps<TData>) {
   const [isPending, startTransition] = useTransition();
@@ -59,7 +62,9 @@ export function DataTable<TData>({
     history: "push",
     startTransition,
   });
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() =>
+    Object.fromEntries((initiallyHiddenColumns ?? []).map((id) => [id, false])),
+  );
 
   const [sortField, sortDirection] = sort.split(".");
   const sorting: SortingState = sortField

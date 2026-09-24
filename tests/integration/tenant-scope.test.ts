@@ -156,3 +156,51 @@ describe("tenant-scoped database client", () => {
     expect(other.city).toBeNull();
   });
 });
+
+describe("tenant client and global identity models (T5)", () => {
+  it("only exposes users who are members of the current organization", async () => {
+    const orgA = await createTestOrganization();
+    const orgB = await createTestOrganization();
+    const roleA = await prisma.role.create({
+      data: { organizationId: orgA.id, key: "executive", name: "Executive" },
+    });
+    const roleB = await prisma.role.create({
+      data: { organizationId: orgB.id, key: "executive", name: "Executive" },
+    });
+    const alice = await prisma.user.create({
+      data: { name: "Alice", email: `alice-${orgA.id}@test.local` },
+    });
+    const bob = await prisma.user.create({
+      data: { name: "Bob", email: `bob-${orgB.id}@test.local` },
+    });
+    await prisma.membership.create({
+      data: { organizationId: orgA.id, userId: alice.id, roleId: roleA.id },
+    });
+    await prisma.membership.create({
+      data: { organizationId: orgB.id, userId: bob.id, roleId: roleB.id },
+    });
+
+    const db = createTenantDb(orgA.id);
+    expect((await db.user.findMany()).map((u) => u.id)).toEqual([alice.id]);
+    expect(await db.user.findUnique({ where: { id: bob.id } })).toBeNull();
+    expect(await db.user.findFirst({ where: { email: bob.email } })).toBeNull();
+    const updated = await db.user.updateMany({ where: { id: bob.id }, data: { name: "Hacked" } });
+    expect(updated.count).toBe(0);
+    await expect(
+      db.user.update({ where: { id: bob.id }, data: { name: "Hacked" } }),
+    ).rejects.toThrow();
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: bob.id } })).name).toBe("Bob");
+  });
+
+  it("blocks authentication internals and scopes sessions", async () => {
+    const org = await createTestOrganization();
+    const db = createTenantDb(org.id);
+    await expect(db.account.findMany()).rejects.toBeInstanceOf(TenantViolationError);
+    await expect(db.verification.findMany()).rejects.toBeInstanceOf(TenantViolationError);
+    await expect(db.rateLimit.findMany()).rejects.toBeInstanceOf(TenantViolationError);
+    await expect(
+      db.session.create({ data: { token: "t", expiresAt: new Date(), userId: org.id } as never }),
+    ).rejects.toBeInstanceOf(TenantViolationError);
+    expect(await db.session.findMany()).toEqual([]);
+  });
+});

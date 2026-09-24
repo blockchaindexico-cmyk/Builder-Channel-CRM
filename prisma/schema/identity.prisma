@@ -1,0 +1,168 @@
+// M02 — Identity, access control and team structure.
+//
+// Global (not tenant-owned, rule T5): User, Session, Account, Verification, RateLimit — managed by Better Auth.
+// Tenant-owned: Role, RolePermission, Membership.
+
+/// A person who can sign in. Global identity; access to an organization is a Membership.
+model User {
+  id               String    @id @default(uuid(7)) @db.Uuid
+  name             String
+  /// Login identity; globally unique (exception to rule T2, like Organization.slug).
+  email            String    @unique
+  emailVerified    Boolean   @default(false) @map("email_verified")
+  image            String?
+  phone            String?
+  failedLoginCount Int       @default(0) @map("failed_login_count")
+  lockedUntil      DateTime? @map("locked_until") @db.Timestamptz(3)
+  lastLoginAt      DateTime? @map("last_login_at") @db.Timestamptz(3)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  sessions    Session[]
+  accounts    Account[]
+  memberships Membership[]
+
+  @@map("users")
+}
+
+model Session {
+  id                   String   @id @default(uuid(7)) @db.Uuid
+  token                String   @unique
+  expiresAt            DateTime @map("expires_at") @db.Timestamptz(3)
+  ipAddress            String?  @map("ip_address")
+  userAgent            String?  @map("user_agent")
+  userId               String   @map("user_id") @db.Uuid
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Organization the session works in (set at sign-in; switchable when users belong to several orgs — F1).
+  activeOrganizationId String?  @map("active_organization_id") @db.Uuid
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id @default(uuid(7)) @db.Uuid
+  accountId             String    @map("account_id")
+  providerId            String    @map("provider_id")
+  userId                String    @map("user_id") @db.Uuid
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?   @map("access_token")
+  refreshToken          String?   @map("refresh_token")
+  idToken               String?   @map("id_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at") @db.Timestamptz(3)
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at") @db.Timestamptz(3)
+  scope                 String?
+  /// Password hash (scrypt) for the "credential" provider.
+  password              String?
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+/// One-time tokens (password reset, invitations).
+model Verification {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  identifier String
+  value      String
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([identifier])
+  @@map("verifications")
+}
+
+/// Rate-limit counters for authentication endpoints (shared across web instances).
+model RateLimit {
+  id          String @id @default(uuid(7)) @db.Uuid
+  key         String @unique
+  count       Int
+  lastRequest BigInt @map("last_request")
+
+  @@map("rate_limits")
+}
+
+enum DataScope {
+  OWN
+  TEAM
+  ALL
+}
+
+/// A named set of permissions within an organization. System roles: admin, manager, executive.
+model Role {
+  id                String       @id @default(uuid(7)) @db.Uuid
+  organizationId    String       @map("organization_id") @db.Uuid
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  key               String
+  name              String
+  description       String?
+  isSystem          Boolean      @default(false) @map("is_system")
+  /// Catalogue permissions already considered for default grants, so permissions added by new modules are
+  /// granted once while an admin's later edits are preserved.
+  seededPermissions String[]     @default([]) @map("seeded_permissions")
+  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  permissions RolePermission[]
+  memberships Membership[]
+
+  @@unique([organizationId, key])
+  @@unique([organizationId, id])
+  @@map("roles")
+}
+
+model RolePermission {
+  organizationId String       @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  roleId         String       @map("role_id") @db.Uuid
+  role           Role         @relation(fields: [organizationId, roleId], references: [organizationId, id], onDelete: Cascade)
+  permission     String
+  /// Data scope for record-level permissions (null for plain permissions).
+  scope          DataScope?
+
+  @@id([roleId, permission])
+  @@index([organizationId])
+  @@map("role_permissions")
+}
+
+enum MembershipStatus {
+  INVITED
+  ACTIVE
+  INACTIVE
+}
+
+/// A user's place in an organization: role, reporting manager and employment details.
+model Membership {
+  id             String           @id @default(uuid(7)) @db.Uuid
+  organizationId String           @map("organization_id") @db.Uuid
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String           @map("user_id") @db.Uuid
+  user           User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  roleId         String           @map("role_id") @db.Uuid
+  role           Role             @relation(fields: [organizationId, roleId], references: [organizationId, id])
+  reportsToId    String?          @map("reports_to_id") @db.Uuid
+  reportsTo      Membership?      @relation("ReportingLine", fields: [organizationId, reportsToId], references: [organizationId, id])
+  directReports  Membership[]     @relation("ReportingLine")
+  employeeCode   String?          @map("employee_code")
+  designation    String?
+  avatarFileId   String?          @map("avatar_file_id") @db.Uuid
+  status         MembershipStatus @default(INVITED)
+  invitedAt      DateTime?        @map("invited_at") @db.Timestamptz(3)
+  joinedAt       DateTime?        @map("joined_at") @db.Timestamptz(3)
+  deactivatedAt  DateTime?        @map("deactivated_at") @db.Timestamptz(3)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([organizationId, userId])
+  @@unique([organizationId, id])
+  @@unique([organizationId, employeeCode])
+  @@index([organizationId, reportsToId])
+  @@index([organizationId, roleId])
+  @@index([organizationId, status])
+  @@map("memberships")
+}

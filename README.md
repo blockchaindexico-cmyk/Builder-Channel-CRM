@@ -38,7 +38,7 @@ pnpm install
 pnpm services:up              # PostgreSQL :5432, RustFS (S3) :9000/:9001, Mailpit :1025/:8025
 pnpm db:generate              # generate the Prisma client
 pnpm db:deploy                # apply migrations
-pnpm db:seed                  # default organization + storage bucket
+pnpm db:seed                  # organization, system roles, first admin (+ demo users), storage bucket
 pnpm dev                      # web (http://localhost:3000) + background worker
 ```
 
@@ -51,8 +51,19 @@ Useful local URLs:
 | http://localhost:8025 | Mailpit — every e-mail the app sends locally |
 | http://localhost:9001 | RustFS console (object storage), login `crm-access-key` / `crm-secret-key` |
 
-> Until authentication arrives in module M02, the app runs in **single-tenant bootstrap mode**: every request acts on
-> the organization named by `DEFAULT_ORGANIZATION_SLUG` with full permissions.
+### Signing in
+
+The seed creates the first administrator from `SEED_ADMIN_NAME` / `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` and, when
+`SEED_DEMO_USERS=true` (never in production), a demo team that shares the admin's password:
+
+| E-mail | Role | Reports to |
+|---|---|---|
+| `admin@demo-realty.test` | Admin | — |
+| `manager@demo-realty.test` | Manager | Admin |
+| `esha@demo-realty.test`, `rahul@demo-realty.test` | Executive | Manager |
+
+With the local `.env` the password is `ChangeMe123!`. There is no public sign-up: administrators invite people from
+**Settings → Users**, and invitations and password resets arrive by e-mail (Mailpit locally).
 
 ## Scripts
 
@@ -97,7 +108,9 @@ See [`src/modules/_template/README.md`](./src/modules/_template/README.md) for h
 - **Integration tests** (`tests/integration`) run against the `crm_test` database created by
   `docker/postgres/init.sql`; the global setup migrates and truncates it. Storage/e-mail tests talk to RustFS and
   Mailpit and are skipped automatically when those services are not running.
-- **End-to-end tests** (`tests/e2e`) run against a seeded local database in desktop and tablet viewports.
+- **End-to-end tests** (`tests/e2e`) run against a seeded local database (with demo users) in desktop and tablet
+  viewports. A setup project signs in as admin, manager and executive once and stores the sessions in
+  `tests/e2e/.auth/` (git-ignored); tests run as the admin unless they pick another persona.
 
 CI (`.github/workflows/ci.yml`) runs lint, format check, typecheck, dependency audit, all Vitest tests, a production
 build and the Playwright suite against real PostgreSQL, RustFS and Mailpit services.
@@ -120,7 +133,7 @@ scaling notes.
 | # | Module | Status |
 |---|---|---|
 | M01 | Project Foundation & Platform Core | Done |
-| M02 | Identity, Access Control & Team Structure | Planned |
+| M02 | Identity, Access Control & Team Structure | Done |
 | M03 | Builder & Project Management | Planned |
 | M04 | Lead Management Core | Planned |
 | M05 | Lead Assignment, Reassignment & Team Workload | Planned |

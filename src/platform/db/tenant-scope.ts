@@ -28,6 +28,20 @@ export const TENANT_MODELS: ReadonlySet<string> = new Set(
 
 const ORGANIZATION_MODEL = Prisma.ModelName.Organization;
 
+/**
+ * Global (non-tenant) models reachable through a tenant client:
+ * - `User`: visible only if the user is a member of the current organization (rule T5).
+ * - `Session`: only sessions working in the current organization.
+ * - Auth internals (`Account`, `Verification`, `RateLimit`) are never available to feature code.
+ */
+const MEMBER_SCOPED_MODELS = new Set<string>([Prisma.ModelName.User]);
+const SESSION_MODEL = Prisma.ModelName.Session;
+const BLOCKED_MODELS = new Set<string>([
+  Prisma.ModelName.Account,
+  Prisma.ModelName.Verification,
+  Prisma.ModelName.RateLimit,
+]);
+
 const WHERE_OPERATIONS = new Set([
   "findUnique",
   "findUniqueOrThrow",
@@ -42,6 +56,15 @@ const WHERE_OPERATIONS = new Set([
   "updateManyAndReturn",
   "delete",
   "deleteMany",
+  "upsert",
+]);
+
+/** Operations whose `where` is a unique input (the unique field must stay at the top level). */
+const UNIQUE_WHERE_OPERATIONS = new Set([
+  "findUnique",
+  "findUniqueOrThrow",
+  "update",
+  "delete",
   "upsert",
 ]);
 
@@ -100,6 +123,47 @@ function assertUpdateDoesNotMoveTenant(data: unknown, organizationId: string, mo
   if ("organization" in data) {
     throw new TenantViolationError(`${model}: the organization of a record cannot be changed.`);
   }
+}
+
+function scopeGlobalModelArgs(
+  model: string,
+  operation: string,
+  args: unknown,
+  organizationId: string,
+): unknown {
+  const input: AnyRecord = isRecord(args) ? { ...args } : {};
+  if (BLOCKED_MODELS.has(model)) {
+    throw new TenantViolationError(
+      `${model} is managed by the authentication layer and not available here.`,
+    );
+  }
+  if (MEMBER_SCOPED_MODELS.has(model)) {
+    // Creating a global user (an invitation) is allowed; every other operation only sees members.
+    if (operation === "create") return input;
+    if (!WHERE_OPERATIONS.has(operation) || operation === "upsert") {
+      throw new TenantViolationError(
+        `${model}.${operation} is not allowed through a tenant client.`,
+      );
+    }
+    const where = isRecord(input.where) ? input.where : {};
+    const membership = { memberships: { some: { organizationId } } };
+    // Unique-where operations need their unique field at the top level, so merge instead of wrapping in AND
+    // (the membership filter wins over any caller-supplied `memberships` condition).
+    input.where = UNIQUE_WHERE_OPERATIONS.has(operation)
+      ? { ...where, ...membership }
+      : { AND: [where, membership] };
+    return input;
+  }
+  if (model === SESSION_MODEL) {
+    if (!WHERE_OPERATIONS.has(operation) || operation === "upsert") {
+      throw new TenantViolationError(
+        `Session.${operation} is not allowed through a tenant client.`,
+      );
+    }
+    input.where = scopeWhere(input.where, organizationId, model, "activeOrganizationId");
+    return input;
+  }
+  return input;
 }
 
 function scopeArgs(
@@ -164,7 +228,9 @@ function tenantScopeExtension(organizationId: string) {
       $allModels: {
         async $allOperations({ model, operation, args, query }) {
           if (model !== ORGANIZATION_MODEL && !TENANT_MODELS.has(model)) {
-            return query(args);
+            return query(
+              scopeGlobalModelArgs(model, operation, args, organizationId) as typeof args,
+            );
           }
           return query(scopeArgs(model, operation, args, organizationId) as typeof args);
         },

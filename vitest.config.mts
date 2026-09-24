@@ -24,6 +24,8 @@ export default defineConfig({
       EMAIL_TRANSPORT: "memory",
       LOG_LEVEL: "silent",
       DEFAULT_ORGANIZATION_SLUG: "test-default",
+      BETTER_AUTH_SECRET: "test-secret-0123456789abcdef0123456789abcdef",
+      APP_URL: "http://localhost:3000",
     },
     projects: [
       {

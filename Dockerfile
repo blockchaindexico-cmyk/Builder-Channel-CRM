@@ -22,7 +22,8 @@ RUN pnpm db:generate
 
 FROM source AS build
 # Build-time placeholder only (validation stays on so defaults apply); runtime images never see it.
-ENV NODE_ENV=production DATABASE_URL=postgresql://build:build@localhost:5432/build
+ENV NODE_ENV=production DATABASE_URL=postgresql://build:build@localhost:5432/build \
+  BETTER_AUTH_SECRET=build-time-placeholder-not-used-at-runtime-0000
 RUN pnpm build && pnpm build:worker
 
 FROM base AS web

@@ -41,6 +41,11 @@ export const env = createEnv({
     SMTP_USER: z.string().min(1).optional(),
     SMTP_PASSWORD: z.string().min(1).optional(),
 
+    /** Signs session cookies and tokens. Generate with `openssl rand -base64 32`. */
+    BETTER_AUTH_SECRET: z.string().min(32),
+    /** Rate limiting of sign-in / password-reset endpoints (keep enabled outside local debugging). */
+    AUTH_RATE_LIMIT_ENABLED: booleanString.default(true),
+
     JOBS_SCHEMA: z.string().min(1).default("pgboss"),
     WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(50).default(5),
   },

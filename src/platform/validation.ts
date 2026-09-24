@@ -1,4 +1,4 @@
-import type { z } from "zod";
+import { z } from "zod";
 
 import { ValidationError } from "@/platform/errors";
 
@@ -25,4 +25,11 @@ export function parseInput<TSchema extends z.ZodType>(
   }
   const message = formErrors[0] ?? "Some fields are invalid. Please check the highlighted values.";
   throw new ValidationError(message, fieldErrors);
+}
+
+const uuidSchema = z.uuid();
+
+/** Returns the value when it is a UUID, otherwise null — for optional id filters taken from URLs. */
+export function uuidOrNull(value: string | null | undefined): string | null {
+  return value && uuidSchema.safeParse(value).success ? value : null;
 }

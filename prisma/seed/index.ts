@@ -1,9 +1,17 @@
 /**
- * Development/bootstrap seed (idempotent). Run with `pnpm db:seed`.
- * Creates the default organization and its settings; later modules add their own seed steps here.
+ * Bootstrap/development seed (idempotent). Run with `pnpm db:seed` — also after every release, because it
+ * syncs system-role permissions for new modules.
+ *
+ * 1. Default organization + settings.
+ * 2. System roles (admin, manager, executive) with default permissions, for every organization.
+ * 3. First administrator from SEED_ADMIN_* (M02-19).
+ * 4. Demo manager and executives when SEED_DEMO_USERS=true (never in production).
  */
 import { env } from "@/config/env";
+import { syncSystemRoles } from "@/modules/identity/server/roles";
+import { auth } from "@/platform/auth/auth";
 import { prisma } from "@/platform/db/client";
+import { createTenantDb } from "@/platform/db/tenant-scope";
 import { getStorage } from "@/platform/storage";
 
 async function seedOrganization() {
@@ -20,8 +28,123 @@ async function seedOrganization() {
     create: { organizationId: organization.id },
     update: {},
   });
-  console.log(`✔ organization "${organization.name}" (${organization.slug}) — ${organization.id}`);
+  console.log(`✔ organization "${organization.name}" (${organization.slug})`);
   return organization;
+}
+
+async function syncRolesForAllOrganizations() {
+  const organizations = await prisma.organization.findMany({ select: { id: true, slug: true } });
+  for (const organization of organizations) {
+    await syncSystemRoles(createTenantDb(organization.id), organization.id);
+  }
+  console.log(`✔ system roles synced for ${organizations.length} organization(s)`);
+}
+
+async function ensureUser(input: {
+  organizationId: string;
+  name: string;
+  email: string;
+  password: string;
+  roleKey: string;
+  reportsToId?: string | null;
+  designation?: string;
+  employeeCode?: string;
+  phone?: string;
+}) {
+  const email = input.email.toLowerCase();
+  const role = await prisma.role.findUniqueOrThrow({
+    where: { organizationId_key: { organizationId: input.organizationId, key: input.roleKey } },
+  });
+
+  let user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    user = await prisma.user.create({
+      data: { name: input.name, email, emailVerified: true, phone: input.phone ?? null },
+    });
+    const context = await auth.$context;
+    await prisma.account.create({
+      data: {
+        userId: user.id,
+        providerId: "credential",
+        accountId: user.id,
+        password: await context.password.hash(input.password),
+      },
+    });
+  }
+
+  const existing = await prisma.membership.findUnique({
+    where: { organizationId_userId: { organizationId: input.organizationId, userId: user.id } },
+  });
+  if (existing) return existing;
+  return prisma.membership.create({
+    data: {
+      organizationId: input.organizationId,
+      userId: user.id,
+      roleId: role.id,
+      reportsToId: input.reportsToId ?? null,
+      designation: input.designation ?? null,
+      employeeCode: input.employeeCode ?? null,
+      status: "ACTIVE",
+      joinedAt: new Date(),
+    },
+  });
+}
+
+async function seedUsers(organizationId: string) {
+  const email = process.env.SEED_ADMIN_EMAIL;
+  const password = process.env.SEED_ADMIN_PASSWORD;
+  if (!email || !password) {
+    console.log(
+      "ℹ SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD not set — skipping the first administrator",
+    );
+    return;
+  }
+  const admin = await ensureUser({
+    organizationId,
+    name: process.env.SEED_ADMIN_NAME ?? "Administrator",
+    email,
+    password,
+    roleKey: "admin",
+    designation: "Director",
+    employeeCode: "EMP-001",
+  });
+  console.log(`✔ admin ${email}`);
+
+  if (process.env.SEED_DEMO_USERS !== "true" || env.NODE_ENV === "production") return;
+  const manager = await ensureUser({
+    organizationId,
+    name: "Meera Manager",
+    email: "manager@demo-realty.test",
+    password,
+    roleKey: "manager",
+    reportsToId: admin.id,
+    designation: "Sales Manager",
+    employeeCode: "EMP-002",
+    phone: "+919820000002",
+  });
+  await ensureUser({
+    organizationId,
+    name: "Esha Executive",
+    email: "esha@demo-realty.test",
+    password,
+    roleKey: "executive",
+    reportsToId: manager.id,
+    designation: "Sales Executive",
+    employeeCode: "EMP-003",
+    phone: "+919820000003",
+  });
+  await ensureUser({
+    organizationId,
+    name: "Rahul Executive",
+    email: "rahul@demo-realty.test",
+    password,
+    roleKey: "executive",
+    reportsToId: manager.id,
+    designation: "Sales Executive",
+    employeeCode: "EMP-004",
+    phone: "+919820000004",
+  });
+  console.log("✔ demo users: manager@, esha@, rahul@demo-realty.test (same password as the admin)");
 }
 
 async function ensureStorage() {
@@ -35,7 +158,9 @@ async function ensureStorage() {
 }
 
 async function main() {
-  await seedOrganization();
+  const organization = await seedOrganization();
+  await syncRolesForAllOrganizations();
+  await seedUsers(organization.id);
   await ensureStorage();
 }
 

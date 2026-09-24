@@ -1,10 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
+const ADMIN_STATE = "tests/e2e/.auth/admin.json";
 
 /**
- * End-to-end tests (M01-25). Runs against a local app with the docker-compose services, migrations and seed
- * applied. Starts `pnpm dev` (web + worker) unless a server is already running.
+ * End-to-end tests (M01-25, M02-20). Runs against a local app with the docker-compose services, migrations and
+ * seed (with demo users) applied. Starts `pnpm dev` (web + worker) unless a server is already running.
+ * Tests run as the seeded admin unless they choose another persona (see tests/e2e/support/auth.ts).
  */
 export default defineConfig({
   testDir: "tests/e2e",
@@ -21,13 +23,26 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   projects: [
+    // Signs in once per persona (admin, manager, executive) and saves the sessions in tests/e2e/.auth.
+    { name: "setup", testMatch: /auth\.setup\.ts/ },
     {
       name: "desktop",
-      use: { ...devices["Desktop Chrome"], viewport: { width: 1366, height: 900 } },
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1366, height: 900 },
+        storageState: ADMIN_STATE,
+      },
     },
     {
       name: "tablet",
-      use: { ...devices["Desktop Chrome"], viewport: { width: 820, height: 1180 }, hasTouch: true },
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 820, height: 1180 },
+        hasTouch: true,
+        storageState: ADMIN_STATE,
+      },
       testMatch: /navigation\.spec\.ts/,
     },
   ],

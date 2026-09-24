@@ -36,6 +36,8 @@ export interface SettingsSection {
   permission?: string;
 }
 
+export type SystemRoleKey = "admin" | "manager" | "executive";
+
 export interface PermissionDefinition {
   /** Dotted key, e.g. `leads.view`. */
   key: string;
@@ -45,6 +47,12 @@ export interface PermissionDefinition {
   group: string;
   /** Record-level permissions support OWN / TEAM / ALL data scopes (M02). */
   scoped?: boolean;
+  /**
+   * Default grants for the system roles (BUILD_PLAN §1.2). Admin always receives every permission (scope ALL);
+   * list `manager` / `executive` here with a scope (scoped permissions) or `true` (plain permissions).
+   * Defaults are applied once per role when the permission first appears; admins can change them afterwards.
+   */
+  defaults?: Partial<Record<Exclude<SystemRoleKey, "admin">, "OWN" | "TEAM" | "ALL" | true>>;
 }
 
 /**
