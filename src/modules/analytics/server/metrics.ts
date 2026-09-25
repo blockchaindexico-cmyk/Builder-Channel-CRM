@@ -23,6 +23,7 @@ import {
 } from "../period";
 import { ANALYTICS_PERMISSIONS } from "../permissions";
 import { localDay, readDailyStats } from "./aggregates";
+import { leadDimensionSql, leadOwnerSql } from "./lead-sql";
 import {
   computeMemberDaily,
   type DimensionFilters,
@@ -76,7 +77,7 @@ export async function resolveReportScope(
   };
 }
 
-const dimensionsOf = (filters: ReportFilters): DimensionFilters => ({
+export const dimensionsOf = (filters: ReportFilters): DimensionFilters => ({
   builderId: uuidOrNull(filters.builderId),
   projectId: uuidOrNull(filters.projectId),
   sourceId: uuidOrNull(filters.sourceId),
@@ -260,25 +261,8 @@ export async function getPipeline(
   const dimensions = dimensionsOf({ ...filters, range: { from: "", to: "" } });
   const org = Prisma.sql`${ctx.organizationId}::uuid`;
   const members = resolved.memberIds;
-  const includeUnassigned = resolved.scope !== "OWN" && !filters.executiveId && !filters.managerId;
-  const owner = members
-    ? includeUnassigned
-      ? Prisma.sql`(l."owner_id" = ANY(${members}::uuid[]) OR l."owner_id" IS NULL)`
-      : Prisma.sql`l."owner_id" = ANY(${members}::uuid[])`
-    : Prisma.sql`TRUE`;
-  const dims: Prisma.Sql[] = [];
-  if (dimensions.sourceId) dims.push(Prisma.sql`AND l."source_id" = ${dimensions.sourceId}::uuid`);
-  if (dimensions.statusId) dims.push(Prisma.sql`AND l."status_id" = ${dimensions.statusId}::uuid`);
-  if (dimensions.projectId) {
-    dims.push(Prisma.sql`AND EXISTS (SELECT 1 FROM "lead_project_interests" i WHERE i."organization_id" = l."organization_id"
-      AND i."lead_id" = l."id" AND i."project_id" = ${dimensions.projectId}::uuid)`);
-  }
-  if (dimensions.builderId) {
-    dims.push(Prisma.sql`AND EXISTS (SELECT 1 FROM "lead_project_interests" i JOIN "projects" p
-      ON p."organization_id" = i."organization_id" AND p."id" = i."project_id"
-      WHERE i."organization_id" = l."organization_id" AND i."lead_id" = l."id" AND p."builder_id" = ${dimensions.builderId}::uuid)`);
-  }
-  const dimSql = dims.length ? Prisma.join(dims, " ") : Prisma.empty;
+  const { sql: owner, includesUnassigned: includeUnassigned } = leadOwnerSql(resolved, filters);
+  const dimSql = leadDimensionSql(dimensions);
   const { unworkedHours } = await getAssignmentSettings(ctx.db, ctx);
   const now = new Date();
   const unworkedBefore = new Date(now.getTime() - unworkedHours * 3_600_000);

@@ -929,10 +929,10 @@ organization dashboard — and deliver every report listed in the PRD with filte
 - [x] **M10-03** Aggregation tables refreshed incrementally from events + nightly reconciliation job; report indexes.
 
 *Dashboards*
-- [ ] **M10-04** Executive "My Day" (PRD §10): today's assigned, new/open, calls completed (positive/negative/unresponsive), callbacks due, follow-ups due, visits, revisits, bookings, closed, lost, not interested, pending list; history by day/week/month/custom.
-- [ ] **M10-05** Manager dashboard (PRD §13): team workload, pending/overdue/unworked, executive comparison & leaderboard, positive/negative/unresponsive patterns, team funnel.
-- [ ] **M10-06** Admin dashboard (PRD §14–15): organization KPIs, builder-wise & project-wise overview, team-wise overview, source/campaign performance, funnel, trends, finance cards (if permitted).
-- [ ] **M10-07** Profile activity/performance summary widget (PRD §21).
+- [x] **M10-04** Executive "My Day" (PRD §10): today's assigned, new/open, calls completed (positive/negative/unresponsive), callbacks due, follow-ups due, visits, revisits, bookings, closed, lost, not interested, pending list; history by day/week/month/custom.
+- [x] **M10-05** Manager dashboard (PRD §13): team workload, pending/overdue/unworked, executive comparison & leaderboard, positive/negative/unresponsive patterns, team funnel.
+- [x] **M10-06** Admin dashboard (PRD §14–15): organization KPIs, builder-wise & project-wise overview, team-wise overview, source/campaign performance, funnel, trends, finance cards (if permitted).
+- [x] **M10-07** Profile activity/performance summary widget (PRD §21).
 
 *Reports (PRD §16)*
 - [ ] **M10-08** Report framework: shared filter bar, table + chart, saved filters, pagination, drill-down to leads.

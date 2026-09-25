@@ -3,6 +3,7 @@ import "server-only";
 import { buildUiRegistry, type UiModule } from "@/platform/registry/ui";
 
 import { activitiesUiModule } from "./activities/ui";
+import { analyticsUiModule } from "./analytics/ui";
 import { assignmentUiModule } from "./assignment/ui";
 import { billingUiModule } from "./billing/ui";
 import { dealsUiModule } from "./deals/ui";
@@ -18,6 +19,7 @@ export const uiModules: readonly UiModule[] = [
   activitiesUiModule,
   dealsUiModule,
   billingUiModule,
+  analyticsUiModule,
 ];
 
 export const uiRegistry = buildUiRegistry(uiModules);

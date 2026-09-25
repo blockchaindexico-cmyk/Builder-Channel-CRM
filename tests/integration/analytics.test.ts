@@ -2,6 +2,12 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { seedActivityMasters } from "@/modules/activities/server/masters";
 import { readDailyStats, refreshDailyStats } from "@/modules/analytics/server/aggregates";
+import {
+  getAgendaToday,
+  getFunnel,
+  getProjectPerformance,
+  getSourcePerformance,
+} from "@/modules/analytics/server/insights";
 import { runNightly } from "@/modules/analytics/server/jobs";
 import { computeMemberDaily } from "@/modules/analytics/server/member-daily";
 import {
@@ -421,6 +427,67 @@ describe("analytics metrics (M10)", () => {
       where: { organizationId: env.orgId, day: new Date("2026-09-16T00:00:00Z") },
     });
     expect(snapshot.reduce((total, row) => total + row.count, 0)).toBe(3);
+  });
+
+  it("follows the leads created in the period through the funnel, by source and by project", async () => {
+    await prisma.lead.update({
+      where: { id: env.leads.l1.id },
+      data: {
+        lastContactedAt: new Date("2026-09-10T04:00:00Z"),
+        firstVisitAt: new Date("2026-09-12T08:00:00Z"),
+        bookedAt: new Date("2026-09-14T08:00:00Z"),
+        closedAt: new Date("2026-09-15T05:00:00Z"),
+      },
+    });
+    const month = { from: "2026-09-01", to: "2026-09-30" };
+    const funnel = await getFunnel(env.ctx.admin, { range: month });
+    expect(funnel).toMatchObject({
+      created: 3,
+      contacted: 1,
+      visited: 1,
+      booked: 1,
+      won: 1,
+      lost: 1,
+    });
+    expect(await getFunnel(env.ctx.exec1, { range: month })).toMatchObject({ created: 1, won: 1 });
+    expect(
+      await getFunnel(env.ctx.admin, { range: { from: "2026-08-01", to: "2026-08-31" } }),
+    ).toMatchObject({
+      created: 0,
+    });
+
+    const sources = await getSourcePerformance(env.ctx.admin, { range: month });
+    expect(
+      sources.map((row) => [row.sourceName === "No source", row.created, row.won]).sort(),
+    ).toEqual([
+      [false, 1, 0],
+      [false, 1, 1],
+      [true, 1, 0],
+    ]);
+
+    const projects = await getProjectPerformance(env.ctx.admin, { range: month });
+    expect(
+      projects.map((row) => [
+        row.projectName,
+        row.interestedLeads,
+        row.visits,
+        row.revisits,
+        row.bookings,
+        row.closures,
+      ]),
+    ).toEqual([
+      ["Alpha One", 1, 1, 1, 1, 1],
+      ["Beta Two", 1, 0, 0, 0, 0],
+    ]);
+    const exec2Projects = await getProjectPerformance(env.ctx.exec2, { range: month });
+    expect(exec2Projects.map((row) => row.projectName)).toEqual(["Beta Two"]);
+  });
+
+  it("counts today's agenda for the scope", async () => {
+    const scope = await resolveReportScope(env.ctx.exec1);
+    const agenda = await getAgendaToday(env.ctx.exec1, scope);
+    // The missed follow-up of 11 September is still to do.
+    expect(agenda).toMatchObject({ overdue: 1, followUpsDue: 0, visitsToday: 0 });
   });
 
   it("resolves report scopes", async () => {
