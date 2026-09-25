@@ -51,7 +51,31 @@ const EXECUTIVES = 54;
 async function drop() {
   const organization = await prisma.organization.findUnique({ where: { slug: SLUG } });
   if (!organization) return console.log("Nothing to drop.");
-  await prisma.organization.delete({ where: { id: organization.id } });
+  // Tenant tables reference each other through composite keys without cascades, and checking them row by row over
+  // millions of rows takes far too long; this local-only cleanup skips the foreign-key triggers (needs a superuser,
+  // as in the Docker database) and empties every tenant table in one transaction.
+  const tables = await prisma.$queryRaw<{ table_name: string }[]>`
+    SELECT table_name FROM information_schema.columns
+    WHERE table_schema = 'public' AND column_name = 'organization_id'`;
+  const users = await prisma.membership.findMany({
+    where: { organizationId: organization.id },
+    select: { userId: true },
+  });
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRawUnsafe(`SET LOCAL session_replication_role = replica`);
+      for (const { table_name: table } of tables) {
+        await tx.$executeRawUnsafe(
+          `DELETE FROM "${table}" WHERE "organization_id" = $1::uuid`,
+          organization.id,
+        );
+      }
+      await tx.$executeRaw`DELETE FROM "organizations" WHERE "id" = ${organization.id}::uuid`;
+      await tx.$executeRaw`DELETE FROM "users" WHERE "id" = ANY(${users.map((row) => row.userId)}::uuid[])
+        AND "email" LIKE '%@load.test'`;
+    },
+    { timeout: 30 * 60_000 },
+  );
   console.log("Load-test organization deleted.");
 }
 
