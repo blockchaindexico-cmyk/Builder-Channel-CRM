@@ -7,6 +7,7 @@ import { platformServerModule } from "@/platform/server-module";
 
 import { catalogServerModule } from "./catalog/server";
 import { identityServerModule } from "./identity/server";
+import { leadsServerModule } from "./leads/server";
 import { organizationServerModule } from "./organization/server";
 
 /**
@@ -18,6 +19,7 @@ export const serverModules: readonly ServerModule[] = [
   organizationServerModule,
   identityServerModule,
   catalogServerModule,
+  leadsServerModule,
 ];
 
 let registry: ServerRegistry | undefined;

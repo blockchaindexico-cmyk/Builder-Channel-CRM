@@ -669,3 +669,27 @@ export async function deleteProject(
   for (const fileId of fileIds) await softDeleteFile(ctx, fileId);
   return { builderId };
 }
+
+/** Project choices for other modules' forms (lead interests…). Empty when the actor cannot view projects. */
+export async function listProjectOptions(
+  ctx: ServiceContext,
+  options: { includeIds?: readonly string[] } = {},
+): Promise<{ id: string; name: string; builderName: string; isActive: boolean }[]> {
+  if (!ctx.permissions.has(CATALOG_PERMISSIONS.projectsView)) return [];
+  const projects = await ctx.db.project.findMany({
+    where: {
+      OR: [
+        { isActive: true },
+        ...(options.includeIds?.length ? [{ id: { in: [...options.includeIds] } }] : []),
+      ],
+    },
+    orderBy: [{ builder: { name: "asc" } }, { name: "asc" }],
+    select: { id: true, name: true, isActive: true, builder: { select: { name: true } } },
+  });
+  return projects.map((project) => ({
+    id: project.id,
+    name: project.name,
+    builderName: project.builder.name,
+    isActive: project.isActive,
+  }));
+}

@@ -4,4 +4,4 @@ export { CATALOG_PERMISSIONS } from "./permissions";
 export { PROJECT_STATUSES, type ProjectStatusValue } from "./schemas";
 export { listBuilderOptions } from "./server/builders";
 export { getCatalogOptions, seedCatalogMasters } from "./server/masters";
-export { getProjectQuickInfo, type ProjectQuickInfo } from "./server/projects";
+export { getProjectQuickInfo, listProjectOptions, type ProjectQuickInfo } from "./server/projects";

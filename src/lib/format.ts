@@ -1,9 +1,5 @@
 import { TZDate } from "@date-fns/tz";
-import {
-  format as formatDateFns,
-  formatDistanceToNowStrict,
-  parse as parseDateFns,
-} from "date-fns";
+import { format as formatDateFns, formatDistanceStrict, parse as parseDateFns } from "date-fns";
 
 /**
  * Formatting helpers (M01-22). All take the organization's regional settings so every screen formats
@@ -94,7 +90,8 @@ export function formatRelative(value: DateInput, now: Date = new Date()): string
   const date = toDate(value);
   if (!date) return "—";
   const suffix = date.getTime() > now.getTime();
-  const distance = formatDistanceToNowStrict(date, { addSuffix: false });
+  if (Math.abs(date.getTime() - now.getTime()) < 45_000) return "just now";
+  const distance = formatDistanceStrict(date, now);
   return suffix ? `in ${distance}` : `${distance} ago`;
 }
 

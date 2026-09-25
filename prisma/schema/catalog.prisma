@@ -19,6 +19,7 @@ model PropertyType {
   updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   projects ProjectPropertyType[]
+  leads    Lead[]
 
   @@unique([organizationId, name])
   @@unique([organizationId, id])
@@ -166,6 +167,7 @@ model Project {
   amenities      ProjectAmenity[]
   propertyTypes  ProjectPropertyType[]
   files          ProjectFile[]
+  leadInterests  LeadProjectInterest[]
 
   @@unique([organizationId, code])
   @@unique([organizationId, id])

@@ -11,6 +11,7 @@
 import { env } from "@/config/env";
 import { seedCatalogMasters } from "@/modules/catalog/server/masters";
 import { syncSystemRoles } from "@/modules/identity/server/roles";
+import { seedLeadMasters } from "@/modules/leads/server/masters";
 import { auth } from "@/platform/auth/auth";
 import { prisma } from "@/platform/db/client";
 import { createTenantDb } from "@/platform/db/tenant-scope";
@@ -42,9 +43,10 @@ async function syncRolesForAllOrganizations() {
     const db = createTenantDb(organization.id);
     await syncSystemRoles(db, organization.id);
     await seedCatalogMasters(db, organization.id);
+    await seedLeadMasters(db, organization.id);
   }
   console.log(
-    `✔ system roles and catalogue masters synced for ${organizations.length} organization(s)`,
+    `✔ system roles, catalogue and lead masters synced for ${organizations.length} organization(s)`,
   );
 }
 

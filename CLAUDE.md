@@ -15,7 +15,7 @@ Guidance for AI-assisted development sessions in this repository.
 
 ## Non-negotiable rules
 - **Multi-tenancy (BUILD_PLAN §2.4, T1–T10):** every tenant-owned table has `organizationId`; unique constraints are per organization; feature code uses the tenant-scoped DB accessor, never the raw Prisma client; the tenant comes from the session, never from request input.
-- **Module boundaries (BUILD_PLAN §2.2):** business logic lives in module services; modules interact only through their `index.ts` public API and domain events; extend other modules via registries, not by editing their internals.
+- **Module boundaries (BUILD_PLAN §2.2):** business logic lives in module services; modules interact only through their `index.ts` public API (plus `client.ts` for shared client components) and domain events; extend other modules via registries (navigation, settings, contributions, UI panels, reference checks), not by editing their internals.
 - **Accountability:** important mutations write an audit log entry, and a lead timeline entry when a lead is involved, in the same transaction.
 - **Authorization:** enforce permissions and data scope (OWN / TEAM / ALL) in services on the server; UI gating is only cosmetic.
 - **Money** uses decimals, never floats. **Timestamps** are stored in UTC and displayed in the organization's timezone.

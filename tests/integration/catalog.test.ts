@@ -122,10 +122,10 @@ describe("catalog: builders, projects and masters (M03)", () => {
         where: { roleId: env.org.role("executive").id },
         select: { permission: true },
       });
-      expect(executive.map((grant) => grant.permission).sort()).toEqual([
-        "builders.view",
-        "projects.view",
-      ]);
+      const granted = executive.map((grant) => grant.permission);
+      expect(granted).toEqual(expect.arrayContaining(["builders.view", "projects.view"]));
+      expect(granted).not.toContain("projects.manage");
+      expect(granted).not.toContain("builders.manage");
     });
 
     it("rejects duplicate names (case-insensitive) and only deletes unused entries", async () => {

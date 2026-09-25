@@ -4,6 +4,7 @@ import type { ModuleManifest } from "@/platform/registry/types";
 import { catalogManifest } from "./catalog/manifest";
 import { coreManifest } from "./core/manifest";
 import { identityManifest } from "./identity/manifest";
+import { leadsManifest } from "./leads/manifest";
 import { organizationManifest } from "./organization/manifest";
 
 /**
@@ -15,6 +16,7 @@ export const moduleManifests: readonly ModuleManifest[] = [
   organizationManifest,
   identityManifest,
   catalogManifest,
+  leadsManifest,
 ];
 
 export const appRegistry = composeRegistry(moduleManifests);

@@ -28,6 +28,14 @@ model Organization {
   configurationTypes ConfigurationType[]
   amenities          Amenity[]
   builders           Builder[]
+  // M04
+  leadSources        LeadSource[]
+  campaigns          Campaign[]
+  leadStatuses       LeadStatus[]
+  leads              Lead[]
+  savedViews         SavedView[]
+  leadImports        LeadImportBatch[]
+  apiKeys            ApiKey[]
 
   @@map("organizations")
 }
@@ -160,6 +168,7 @@ model FileObject {
 
   projectFiles ProjectFile[]
   builderFiles BuilderFile[]
+  leadFiles    LeadFile[]
 
   @@unique([organizationId, id])
   @@index([organizationId, purpose, createdAt(sort: Desc)])
@@ -176,4 +185,13 @@ model WorkerHeartbeat {
   info       Json     @default("{}")
 
   @@map("worker_heartbeats")
+}
+
+/// Fixed-window request counters (API rate limits), shared by all web instances.
+model RateLimitWindow {
+  key         String   @id
+  windowStart DateTime @map("window_start") @db.Timestamptz(3)
+  count       Int
+
+  @@map("rate_limit_windows")
 }

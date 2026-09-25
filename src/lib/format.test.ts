@@ -7,6 +7,7 @@ import {
   formatMoney,
   formatMonthYear,
   formatNumber,
+  formatRelative,
   formatTime,
   toCalendarDateString,
 } from "./format";
@@ -61,5 +62,20 @@ describe("calendar dates", () => {
   it("reads database dates stored at UTC midnight", () => {
     expect(toCalendarDateString(new Date("2027-12-01T00:00:00.000Z"))).toBe("2027-12-01");
     expect(toCalendarDateString(null)).toBeNull();
+  });
+});
+
+describe("formatRelative", () => {
+  const now = new Date("2026-09-25T10:00:00.000Z");
+
+  it("says just now within the first 45 seconds", () => {
+    expect(formatRelative("2026-09-25T09:59:30.000Z", now)).toBe("just now");
+    expect(formatRelative("2026-09-25T10:00:10.000Z", now)).toBe("just now");
+  });
+
+  it("describes past and future distances", () => {
+    expect(formatRelative("2026-09-25T09:55:00.000Z", now)).toBe("5 minutes ago");
+    expect(formatRelative("2026-09-27T10:00:00.000Z", now)).toBe("in 2 days");
+    expect(formatRelative(null, now)).toBe("—");
   });
 });

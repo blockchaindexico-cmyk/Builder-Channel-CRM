@@ -546,3 +546,33 @@ export async function assertCanViewMember(
   const scope = await resolveDataScope(ctx, IDENTITY_PERMISSIONS.usersView);
   if (!isWithinScope(scope, membershipId)) throw new ForbiddenError();
 }
+
+/**
+ * Colleague names for pickers and filters in other modules (owner, manager…). Names are not sensitive inside
+ * an organization, so no permission is required; callers pass the ids their own scope allows.
+ */
+export async function listMemberOptions(
+  ctx: ServiceContext,
+  options: { ids?: readonly string[]; managersOnly?: boolean; includeInactive?: boolean } = {},
+): Promise<{ membershipId: string; name: string; roleName: string; status: MembershipStatus }[]> {
+  const where: Prisma.MembershipWhereInput = {};
+  if (options.ids) where.id = { in: [...options.ids] };
+  if (!options.includeInactive) where.status = { not: "INACTIVE" };
+  if (options.managersOnly) where.directReports = { some: {} };
+  const members = await ctx.db.membership.findMany({
+    where,
+    orderBy: { user: { name: "asc" } },
+    select: {
+      id: true,
+      status: true,
+      user: { select: { name: true } },
+      role: { select: { name: true } },
+    },
+  });
+  return members.map((member) => ({
+    membershipId: member.id,
+    name: member.user.name,
+    roleName: member.role.name,
+    status: member.status,
+  }));
+}

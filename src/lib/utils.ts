@@ -18,3 +18,8 @@ export function initials(name: string): string {
       .join("") || "?"
   );
 }
+
+/** "1 lead", "3 leads", "2 statuses" — the count followed by the singular or plural noun. */
+export function plural(count: number, singular: string, pluralForm = `${singular}s`): string {
+  return `${count} ${count === 1 ? singular : pluralForm}`;
+}

@@ -62,9 +62,9 @@ const eslintConfig = defineConfig([
           ],
           patterns: [
             {
-              group: ["@/modules/*/*", "!@/modules/*/index"],
+              group: ["@/modules/*/*", "!@/modules/*/index", "!@/modules/*/client"],
               message:
-                "Import other modules only through their public API (`@/modules/<name>`). Use relative imports inside a module.",
+                "Import other modules only through their public API (`@/modules/<name>`, or `@/modules/<name>/client` for client components). Use relative imports inside a module.",
             },
           ],
         },

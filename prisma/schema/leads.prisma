@@ -1,0 +1,403 @@
+// M04 — Lead management core: masters, leads, interests, notes, files, timeline, status history, views,
+// imports and the intake API keys.
+
+enum LeadSourceType {
+  WEBSITE
+  PORTAL
+  WALK_IN
+  REFERRAL
+  SOCIAL
+  CAMPAIGN
+  IMPORT
+  API
+  OTHER
+}
+
+/// Where leads come from (portal, website, walk-in…). `code` is used by imports and the intake API.
+model LeadSource {
+  id             String         @id @default(uuid(7)) @db.Uuid
+  organizationId String         @map("organization_id") @db.Uuid
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  code           String
+  type           LeadSourceType @default(OTHER)
+  isActive       Boolean        @default(true) @map("is_active")
+  sortOrder      Int            @default(0) @map("sort_order")
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  campaigns Campaign[]
+  leads     Lead[]
+
+  @@unique([organizationId, code])
+  @@unique([organizationId, name])
+  @@unique([organizationId, id])
+  @@map("lead_sources")
+}
+
+/// A marketing campaign (optional, belongs to a source) with dates and cost.
+model Campaign {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sourceId       String?      @map("source_id") @db.Uuid
+  source         LeadSource?  @relation(fields: [organizationId, sourceId], references: [organizationId, id], onDelete: Restrict)
+  name           String
+  code           String
+  startDate      DateTime?    @map("start_date") @db.Date
+  endDate        DateTime?    @map("end_date") @db.Date
+  cost           Decimal?     @db.Decimal(14, 2)
+  notes          String?
+  isActive       Boolean      @default(true) @map("is_active")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  leads Lead[]
+
+  @@unique([organizationId, code])
+  @@unique([organizationId, id])
+  @@map("campaigns")
+}
+
+enum LeadStatusCategory {
+  OPEN
+  ACTIVE
+  BOOKING
+  WON
+  LOST
+  INVALID
+}
+
+/// Lead lifecycle status (BUILD_PLAN §1.4). `key` is immutable; labels, colours and order are configurable.
+model LeadStatus {
+  id             String             @id @default(uuid(7)) @db.Uuid
+  organizationId String             @map("organization_id") @db.Uuid
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  key            String
+  label          String
+  color          String             @default("#64748b")
+  category       LeadStatusCategory
+  sortOrder      Int                @default(0) @map("sort_order")
+  isTerminal     Boolean            @default(false) @map("is_terminal")
+  requiresReason Boolean            @default(false) @map("requires_reason")
+  /// Seeded statuses whose key business logic depends on; they cannot be deleted.
+  isSystem       Boolean            @default(false) @map("is_system")
+  isActive       Boolean            @default(true) @map("is_active")
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  leads Lead[]
+
+  @@unique([organizationId, key])
+  @@unique([organizationId, id])
+  @@map("lead_statuses")
+}
+
+enum LeadTemperature {
+  HOT
+  WARM
+  COLD
+}
+
+enum LeadPurpose {
+  END_USE
+  INVESTMENT
+}
+
+enum BuyingTimeline {
+  IMMEDIATE
+  WITHIN_3_MONTHS
+  WITHIN_6_MONTHS
+  WITHIN_1_YEAR
+  LATER
+}
+
+enum DuplicateStatus {
+  NONE
+  /// Matched an existing lead on create/import/API; waiting for review.
+  SUSPECTED
+  /// Reviewed: it is a duplicate of `duplicateOf` (status set to Invalid).
+  CONFIRMED
+  /// Reviewed: not a duplicate.
+  DISMISSED
+  /// Merged into `duplicateOf`.
+  MERGED
+}
+
+enum LeadChannel {
+  MANUAL
+  IMPORT
+  API
+}
+
+/// A prospective buyer and their requirement (PRD §5).
+model Lead {
+  id                        String           @id @default(uuid(7)) @db.Uuid
+  organizationId            String           @map("organization_id") @db.Uuid
+  organization              Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// Unique per organization (rule T7), e.g. LD-000123.
+  number                    String
+  name                      String
+  mobile                    String?
+  /// E.164 when the number could be parsed, otherwise its digits; used for duplicates and search.
+  mobileNormalized          String?          @map("mobile_normalized")
+  alternateMobile           String?          @map("alternate_mobile")
+  alternateMobileNormalized String?          @map("alternate_mobile_normalized")
+  email                     String?
+  emailNormalized           String?          @map("email_normalized")
+  city                      String?
+  locality                  String?
+  address                   String?
+  sourceId                  String?          @map("source_id") @db.Uuid
+  source                    LeadSource?      @relation(fields: [organizationId, sourceId], references: [organizationId, id], onDelete: Restrict)
+  campaignId                String?          @map("campaign_id") @db.Uuid
+  campaign                  Campaign?        @relation(fields: [organizationId, campaignId], references: [organizationId, id], onDelete: Restrict)
+  /// Portal listing, referrer name or other source detail.
+  subSource                 String?          @map("sub_source")
+  channel                   LeadChannel      @default(MANUAL)
+  statusId                  String           @map("status_id") @db.Uuid
+  status                    LeadStatus       @relation(fields: [organizationId, statusId], references: [organizationId, id], onDelete: Restrict)
+  /// Membership owning the lead (null = unassigned). Assignment rules arrive with M05.
+  ownerId                   String?          @map("owner_id") @db.Uuid
+  owner                     Membership?      @relation("LeadOwner", fields: [organizationId, ownerId], references: [organizationId, id], onDelete: Restrict)
+  createdById               String?          @map("created_by_id") @db.Uuid
+  createdBy                 Membership?      @relation("LeadCreator", fields: [organizationId, createdById], references: [organizationId, id], onDelete: Restrict)
+  budgetMin                 Decimal?         @map("budget_min") @db.Decimal(14, 2)
+  budgetMax                 Decimal?         @map("budget_max") @db.Decimal(14, 2)
+  propertyTypeId            String?          @map("property_type_id") @db.Uuid
+  propertyType              PropertyType?    @relation(fields: [organizationId, propertyTypeId], references: [organizationId, id], onDelete: Restrict)
+  /// Configuration type ids (validated by the service against the organization's masters).
+  configurationTypeIds      String[]         @default([]) @map("configuration_type_ids") @db.Uuid
+  preferredLocations        String[]         @default([]) @map("preferred_locations")
+  purpose                   LeadPurpose?
+  buyingTimeline            BuyingTimeline?  @map("buying_timeline")
+  requirementNotes          String?          @map("requirement_notes")
+  temperature               LeadTemperature?
+  tags                      String[]         @default([])
+  duplicateStatus           DuplicateStatus  @default(NONE) @map("duplicate_status")
+  duplicateOfId             String?          @map("duplicate_of_id") @db.Uuid
+  duplicateOf               Lead?            @relation("LeadDuplicates", fields: [organizationId, duplicateOfId], references: [organizationId, id], onDelete: Restrict)
+  duplicates                Lead[]           @relation("LeadDuplicates")
+  statusChangedAt           DateTime         @default(now()) @map("status_changed_at") @db.Timestamptz(3)
+  lastActivityAt            DateTime         @default(now()) @map("last_activity_at") @db.Timestamptz(3)
+  closedAt                  DateTime?        @map("closed_at") @db.Timestamptz(3)
+  /// Future custom fields (validated per organization).
+  customFields              Json             @default("{}") @map("custom_fields")
+  deletedAt                 DateTime?        @map("deleted_at") @db.Timestamptz(3)
+  createdAt                 DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                 DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  interests     LeadProjectInterest[]
+  notes         LeadNote[]
+  files         LeadFile[]
+  activities    LeadActivity[]
+  statusHistory LeadStatusHistory[]
+
+  @@unique([organizationId, number])
+  @@unique([organizationId, id])
+  @@index([organizationId, statusId])
+  @@index([organizationId, ownerId])
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([organizationId, lastActivityAt(sort: Desc)])
+  @@index([organizationId, mobileNormalized])
+  @@index([organizationId, alternateMobileNormalized])
+  @@index([organizationId, emailNormalized])
+  @@index([organizationId, duplicateStatus])
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "leads_name_trgm_idx")
+  @@index([mobileNormalized(ops: raw("gin_trgm_ops"))], type: Gin, map: "leads_mobile_trgm_idx")
+  @@index([emailNormalized(ops: raw("gin_trgm_ops"))], type: Gin, map: "leads_email_trgm_idx")
+  @@map("leads")
+}
+
+enum InterestLevel {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+/// Builder/project interest of a lead (PRD §5).
+model LeadProjectInterest {
+  organizationId String        @map("organization_id") @db.Uuid
+  leadId         String        @map("lead_id") @db.Uuid
+  lead           Lead          @relation(fields: [organizationId, leadId], references: [organizationId, id], onDelete: Cascade)
+  projectId      String        @map("project_id") @db.Uuid
+  project        Project       @relation(fields: [organizationId, projectId], references: [organizationId, id], onDelete: Restrict)
+  level          InterestLevel @default(MEDIUM)
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@id([leadId, projectId])
+  @@index([organizationId, projectId])
+  @@map("lead_project_interests")
+}
+
+/// Notes and remarks (never hard-deleted).
+model LeadNote {
+  id             String      @id @default(uuid(7)) @db.Uuid
+  organizationId String      @map("organization_id") @db.Uuid
+  leadId         String      @map("lead_id") @db.Uuid
+  lead           Lead        @relation(fields: [organizationId, leadId], references: [organizationId, id], onDelete: Cascade)
+  authorId       String?     @map("author_id") @db.Uuid
+  author         Membership? @relation("LeadNoteAuthor", fields: [organizationId, authorId], references: [organizationId, id], onDelete: Restrict)
+  authorName     String      @map("author_name")
+  body           String
+  isPinned       Boolean     @default(false) @map("is_pinned")
+  editedAt       DateTime?   @map("edited_at") @db.Timestamptz(3)
+  deletedAt      DateTime?   @map("deleted_at") @db.Timestamptz(3)
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([organizationId, leadId, createdAt(sort: Desc)])
+  @@map("lead_notes")
+}
+
+/// Attachments of a lead (PRD §27). Removal is a soft delete.
+model LeadFile {
+  id             String     @id @default(uuid(7)) @db.Uuid
+  organizationId String     @map("organization_id") @db.Uuid
+  leadId         String     @map("lead_id") @db.Uuid
+  lead           Lead       @relation(fields: [organizationId, leadId], references: [organizationId, id], onDelete: Cascade)
+  fileId         String     @map("file_id") @db.Uuid
+  file           FileObject @relation(fields: [organizationId, fileId], references: [organizationId, id], onDelete: Restrict)
+  title          String
+  uploadedById   String?    @map("uploaded_by_id") @db.Uuid
+  uploadedByName String     @map("uploaded_by_name")
+  deletedAt      DateTime?  @map("deleted_at") @db.Timestamptz(3)
+  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@unique([organizationId, fileId])
+  @@index([organizationId, leadId])
+  @@map("lead_files")
+}
+
+/// Lead timeline entry (PRD §22): who did what and when. Written in the same transaction as the change.
+model LeadActivity {
+  id             String    @id @default(uuid(7)) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  leadId         String    @map("lead_id") @db.Uuid
+  lead           Lead      @relation(fields: [organizationId, leadId], references: [organizationId, id], onDelete: Cascade)
+  /// Namespaced type, e.g. CREATED, STATUS_CHANGED, NOTE_ADDED (M05+: ASSIGNED, CALL_LOGGED…).
+  type           String
+  actorType      ActorType @map("actor_type")
+  actorId        String?   @map("actor_id") @db.Uuid
+  actorName      String    @map("actor_name")
+  summary        String
+  payload        Json      @default("{}")
+  occurredAt     DateTime  @default(now()) @map("occurred_at") @db.Timestamptz(3)
+
+  @@index([organizationId, leadId, occurredAt(sort: Desc)])
+  @@index([organizationId, type, occurredAt(sort: Desc)])
+  @@map("lead_activities")
+}
+
+/// Every status change with its reason (PRD §28 "who changed the status").
+model LeadStatusHistory {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  leadId         String   @map("lead_id") @db.Uuid
+  lead           Lead     @relation(fields: [organizationId, leadId], references: [organizationId, id], onDelete: Cascade)
+  fromStatusId   String?  @map("from_status_id") @db.Uuid
+  toStatusId     String   @map("to_status_id") @db.Uuid
+  reason         String?
+  changedById    String?  @map("changed_by_id") @db.Uuid
+  changedByName  String   @map("changed_by_name")
+  changedAt      DateTime @default(now()) @map("changed_at") @db.Timestamptz(3)
+
+  @@index([organizationId, leadId, changedAt(sort: Desc)])
+  @@index([organizationId, toStatusId, changedAt(sort: Desc)])
+  @@map("lead_status_history")
+}
+
+/// A saved lead-list view (filters, columns, sort); personal or shared with everyone.
+model SavedView {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  ownerId        String       @map("owner_id") @db.Uuid
+  owner          Membership   @relation("SavedViewOwner", fields: [organizationId, ownerId], references: [organizationId, id], onDelete: Cascade)
+  name           String
+  isShared       Boolean      @default(false) @map("is_shared")
+  /// URL query string of the view (filters, sort, columns).
+  query          String
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([organizationId, ownerId])
+  @@map("saved_views")
+}
+
+enum ImportStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+/// One CSV/XLSX import (M04-18): mapping, counters and the error report.
+model LeadImportBatch {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  fileId         String       @map("file_id") @db.Uuid
+  fileName       String       @map("file_name")
+  status         ImportStatus @default(QUEUED)
+  /// Column mapping { fieldKey: columnIndex } and import options (default source, owner, status).
+  mapping        Json
+  options        Json         @default("{}")
+  totalRows      Int          @default(0) @map("total_rows")
+  importedRows   Int          @default(0) @map("imported_rows")
+  duplicateRows  Int          @default(0) @map("duplicate_rows")
+  skippedRows    Int          @default(0) @map("skipped_rows")
+  errorRows      Int          @default(0) @map("error_rows")
+  /// First 500 row errors: [{ row, message }].
+  errors         Json         @default("[]")
+  errorFileId    String?      @map("error_file_id") @db.Uuid
+  createdById    String       @map("created_by_id") @db.Uuid
+  createdByName  String       @map("created_by_name")
+  startedAt      DateTime?    @map("started_at") @db.Timestamptz(3)
+  completedAt    DateTime?    @map("completed_at") @db.Timestamptz(3)
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@map("lead_import_batches")
+}
+
+/// Key for the lead intake API (M04-20). Only a SHA-256 hash is stored; the key is shown once.
+model ApiKey {
+  id              String       @id @default(uuid(7)) @db.Uuid
+  organizationId  String       @map("organization_id") @db.Uuid
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name            String
+  /// First characters of the key, shown to recognise it (e.g. "crm_7f3a9c1d").
+  prefix          String
+  hashedKey       String       @unique @map("hashed_key")
+  /// Lead source applied when a request does not name one.
+  defaultSourceId String?      @map("default_source_id") @db.Uuid
+  lastUsedAt      DateTime?    @map("last_used_at") @db.Timestamptz(3)
+  revokedAt       DateTime?    @map("revoked_at") @db.Timestamptz(3)
+  createdById     String?      @map("created_by_id") @db.Uuid
+  createdByName   String       @map("created_by_name")
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  idempotencyKeys ApiIdempotencyKey[]
+
+  @@unique([organizationId, id])
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@map("api_keys")
+}
+
+/// Stored responses for `Idempotency-Key` retries (kept 24 hours).
+model ApiIdempotencyKey {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  apiKeyId       String   @map("api_key_id") @db.Uuid
+  apiKey         ApiKey   @relation(fields: [organizationId, apiKeyId], references: [organizationId, id], onDelete: Cascade)
+  key            String
+  requestHash    String   @map("request_hash")
+  statusCode     Int      @map("status_code")
+  response       Json
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@unique([apiKeyId, key])
+  @@index([createdAt])
+  @@map("api_idempotency_keys")
+}

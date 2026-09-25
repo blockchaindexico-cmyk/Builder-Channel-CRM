@@ -621,29 +621,29 @@ manage the configurable lifecycle, detect duplicates, and show a complete, attri
 **Checklist**
 
 *Data & masters*
-- [ ] **M04-01** Models & migrations with indexes (`pg_trgm` on name/email/mobile; `(organizationId, statusId)`, `(organizationId, ownerId)`, `(organizationId, createdAt)`).
-- [ ] **M04-02** Seed the 15 default statuses (§1.4) and default lead sources.
-- [ ] **M04-03** Settings pages: lead sources, campaigns, lead statuses (rename, colour, order, activate; system keys locked), duplicate policy.
+- [x] **M04-01** Models & migrations with indexes (`pg_trgm` on name/email/mobile; `(organizationId, statusId)`, `(organizationId, ownerId)`, `(organizationId, createdAt)`).
+- [x] **M04-02** Seed the 15 default statuses (§1.4) and default lead sources.
+- [x] **M04-03** Settings pages: lead sources, campaigns, lead statuses (rename, colour, order, activate; system keys locked), duplicate policy.
 
 *Lead CRUD & detail*
-- [ ] **M04-04** Phone/email normalization (org default country) and lead-number sequence.
-- [ ] **M04-05** Create-lead form: contact, requirement, source/campaign, builder/project interests (multiple), first note; live duplicate check.
-- [ ] **M04-06** Lead service: create/update with audit + timeline (`CREATED`, `UPDATED` with changed fields and previous values).
-- [ ] **M04-07** Lead detail page: header (lead number, status, owner, temperature, quick actions), overview, requirement, projects of interest (with M03 quick-info drawer), timeline, notes, attachments; panel registry for later modules.
-- [ ] **M04-08** Status change dialog: transition validation, reason where required, reopen permission; writes `LeadStatusHistory` + timeline.
-- [ ] **M04-09** Notes: add, edit own, pin; soft delete with audit.
-- [ ] **M04-10** Attachments: upload, download, soft delete with permission checks.
-- [ ] **M04-11** Timeline component: chronological, filter by event type, actor + timestamp on every entry, pluggable renderers.
+- [x] **M04-04** Phone/email normalization (org default country) and lead-number sequence.
+- [x] **M04-05** Create-lead form: contact, requirement, source/campaign, builder/project interests (multiple), first note; live duplicate check.
+- [x] **M04-06** Lead service: create/update with audit + timeline (`CREATED`, `UPDATED` with changed fields and previous values).
+- [x] **M04-07** Lead detail page: header (lead number, status, owner, temperature, quick actions), overview, requirement, projects of interest (with M03 quick-info drawer), timeline, notes, attachments; panel registry for later modules.
+- [x] **M04-08** Status change dialog: transition validation, reason where required, reopen permission; writes `LeadStatusHistory` + timeline.
+- [x] **M04-09** Notes: add, edit own, pin; soft delete with audit.
+- [x] **M04-10** Attachments: upload, download, soft delete with permission checks.
+- [x] **M04-11** Timeline component: chronological, filter by event type, actor + timestamp on every entry, pluggable renderers.
 
 *Lists, search & views*
-- [ ] **M04-12** Lead list: server-side pagination and sorting; search by name, mobile (any format), email, lead number.
-- [ ] **M04-13** Filters: builder, project, status, status category, source, campaign, owner, manager/team, date ranges (created / updated / last activity), temperature, tags — all in the URL.
-- [ ] **M04-14** Views: role defaults (My Leads, Team Leads, All Leads, Unassigned, Duplicates) + saved personal/shared views + column chooser.
+- [x] **M04-12** Lead list: server-side pagination and sorting; search by name, mobile (any format), email, lead number.
+- [x] **M04-13** Filters: builder, project, status, status category, source, campaign, owner, manager/team, date ranges (created / updated / last activity), temperature, tags — all in the URL.
+- [x] **M04-14** Views: role defaults (My Leads, Team Leads, All Leads, Unassigned, Duplicates) + saved personal/shared views + column chooser.
 - [ ] **M04-15** Bulk-action framework (select rows → action) with bulk status change and export; M05 adds bulk assign.
 
 *Duplicates*
 - [ ] **M04-16** Duplicate detection on create, import and API using the organization's policy.
-- [ ] **M04-17** Duplicate review queue, mark-as-duplicate (linked to original), basic merge (moves notes, interests, activities, files; secondary marked merged).
+- [x] **M04-17** Duplicate review queue, mark-as-duplicate (linked to original), basic merge (moves notes, interests, activities, files; secondary marked merged).
 
 *Import, export & intake*
 - [ ] **M04-18** CSV/XLSX import: upload → column mapping → validation preview → background job → result report with error rows; import history.
@@ -651,7 +651,7 @@ manage the configurable lifecycle, detect duplicates, and show a complete, attri
 - [ ] **M04-20** Lead intake API `POST /api/v1/leads` (API-key auth, Zod validation, idempotency key, rate limiting, source/campaign mapping) + API key management (create, show once, revoke) + API docs page.
 
 *Permissions, events & tests*
-- [ ] **M04-21** Permissions (`leads.view|create|update|change_status|reopen|delete|import|export|merge`, `lead_masters.manage`, `api_keys.manage`) with data scope applied in every query.
+- [x] **M04-21** Permissions (`leads.view|create|update|change_status|reopen|delete|import|export|merge`, `lead_masters.manage`, `api_keys.manage`) with data scope applied in every query.
 - [ ] **M04-22** Domain events: `lead.created`, `lead.updated`, `lead.status_changed`, `lead.note_added`, `lead.duplicate_detected`, `lead.merged`, `lead.import_completed`.
 - [ ] **M04-23** Tests: duplicate policies, scope filtering per role, status rules, timeline completeness, import (valid/invalid rows), intake API auth & idempotency, phone-format search.
 

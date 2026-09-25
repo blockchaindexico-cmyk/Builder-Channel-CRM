@@ -7,7 +7,7 @@
 | Web (Next.js standalone) | `web` | `node server.js` (port 3000) | Horizontal; stateless |
 | Worker (jobs, events, cron) | `worker` | `node dist/worker/index.mjs` (self-contained bundle) | 1+ instances (pg-boss coordinates) |
 | Migrations / seed | `migrate` | `pnpm db:deploy` (default), `pnpm db:seed` | One-off per release |
-| PostgreSQL 16+ | managed service | — | Automated backups + PITR |
+| PostgreSQL 16+ (with the `pg_trgm` extension) | managed service | — | Automated backups + PITR |
 | Object storage | S3 / R2 | — | Versioning recommended |
 | SMTP / Resend | provider | — | — |
 
@@ -43,6 +43,9 @@ containers directly to the internet.
 1. Build the images from the same commit: `docker build --target web …`, `--target worker …`, `--target migrate …`.
 2. Run migrations with the new migrate image: `docker run --rm --env-file prod.env crm-migrate`.
    Migrations must be backward compatible with the previous web version (expand → migrate → contract).
+   The M04 migration runs `CREATE EXTENSION IF NOT EXISTS pg_trgm` (fast lead search). Managed PostgreSQL
+   (RDS, Cloud SQL, Azure, Supabase, Neon) allows it for the database owner; otherwise create it once as a
+   superuser before the first release.
 3. Roll out the worker, then the web instances (rolling update).
 4. Verify `GET /api/health` returns `"status":"ok"` (database, storage and worker heartbeat).
    On the very first release, run the seed once (`crm-migrate pnpm db:seed`) to create the organization, the system

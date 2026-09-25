@@ -158,6 +158,12 @@ model Membership {
   createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
 
+  // M04
+  ownedLeads   Lead[]      @relation("LeadOwner")
+  createdLeads Lead[]      @relation("LeadCreator")
+  leadNotes    LeadNote[]  @relation("LeadNoteAuthor")
+  savedViews   SavedView[] @relation("SavedViewOwner")
+
   @@unique([organizationId, userId])
   @@unique([organizationId, id])
   @@unique([organizationId, employeeCode])

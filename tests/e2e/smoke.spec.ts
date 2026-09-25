@@ -68,6 +68,15 @@ test.describe("smoke", () => {
       "/settings/catalog/property-types",
       "/settings/catalog/configuration-types",
       "/settings/catalog/amenities",
+      // M04
+      "/leads",
+      "/leads?view=unassigned",
+      "/leads/new",
+      "/leads/duplicates",
+      "/settings/leads/statuses",
+      "/settings/leads/sources",
+      "/settings/leads/campaigns",
+      "/settings/leads/duplicates",
     ];
     for (const path of paths) {
       await page.goto(path);

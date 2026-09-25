@@ -8,24 +8,34 @@ export type ResolvedScope = { scope: "ALL" } | { scope: "TEAM" | "OWN"; membersh
 const teamCache = new WeakMap<ServiceContext, Promise<string[]>>();
 
 /**
- * Memberships in the actor's reporting tree: the actor plus everyone reporting to them directly or
- * indirectly (multi-level hierarchy, Q-04). Cycle-safe (`UNION`), memoized per context.
+ * A membership and everyone reporting to it directly or indirectly (multi-level hierarchy, Q-04).
+ * Cycle-safe (`UNION`).
  */
+export async function getSubtreeMembershipIds(
+  db: Pick<ServiceContext["db"], "$queryRaw">,
+  organizationId: string,
+  membershipId: string,
+): Promise<string[]> {
+  const rows = await db.$queryRaw<{ id: string }[]>`
+    WITH RECURSIVE tree AS (
+      SELECT m.id FROM "memberships" m
+      WHERE m.organization_id = ${organizationId}::uuid AND m.id = ${membershipId}::uuid
+      UNION
+      SELECT child.id FROM "memberships" child
+      JOIN tree ON child.reports_to_id = tree.id
+      WHERE child.organization_id = ${organizationId}::uuid
+    )
+    SELECT id FROM tree`;
+  return rows.map((row) => row.id);
+}
+
+/** Memberships in the actor's reporting tree (the actor included), memoized per context. */
 export function getTeamMembershipIds(ctx: ServiceContext): Promise<string[]> {
   const membershipId = ctx.actor.membershipId;
   if (!membershipId) return Promise.resolve([]);
   let pending = teamCache.get(ctx);
   if (!pending) {
-    pending = ctx.db.$queryRaw<{ id: string }[]>`
-        WITH RECURSIVE tree AS (
-          SELECT m.id FROM "memberships" m
-          WHERE m.organization_id = ${ctx.organizationId}::uuid AND m.id = ${membershipId}::uuid
-          UNION
-          SELECT child.id FROM "memberships" child
-          JOIN tree ON child.reports_to_id = tree.id
-          WHERE child.organization_id = ${ctx.organizationId}::uuid
-        )
-        SELECT id FROM tree`.then((rows) => rows.map((row) => row.id));
+    pending = getSubtreeMembershipIds(ctx.db, ctx.organizationId, membershipId);
     teamCache.set(ctx, pending);
   }
   return pending;
