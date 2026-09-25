@@ -68,7 +68,7 @@ export function DigestEmail({
                     fontWeight: line.attention && line.value > 0 ? 700 : 500,
                   }}
                 >
-                  {line.value}
+                  {line.display ?? line.value}
                 </Text>
               </Column>
             </Row>

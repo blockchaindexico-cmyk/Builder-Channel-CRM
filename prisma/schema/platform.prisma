@@ -54,6 +54,11 @@ model Organization {
   lossReasons         LossReason[]
   bookingStages       BookingStage[]
   bookings            Booking[]
+  // M09
+  commissionTerms     CommissionTerm[]
+  dealFinancials      DealFinancial[]
+  invoices            Invoice[]
+  businessExpenses    BusinessExpense[]
 
   @@map("organizations")
 }
@@ -189,6 +194,7 @@ model FileObject {
   leadFiles    LeadFile[]
   callLogs     CallLog[]
   bookingFiles BookingFile[]
+  invoicePdfs  Invoice[]
 
   @@unique([organizationId, id])
   @@index([organizationId, purpose, createdAt(sort: Desc)])

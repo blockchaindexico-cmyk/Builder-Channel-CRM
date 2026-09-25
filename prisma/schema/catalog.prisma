@@ -90,11 +90,14 @@ model Builder {
   createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  contacts   BuilderContact[]
-  projects   Project[]
-  files      BuilderFile[]
-  siteVisits SiteVisit[]
-  bookings   Booking[]
+  contacts        BuilderContact[]
+  projects        Project[]
+  files           BuilderFile[]
+  siteVisits      SiteVisit[]
+  bookings        Booking[]
+  commissionTerms CommissionTerm[]
+  dealFinancials  DealFinancial[]
+  invoices        Invoice[]
 
   @@unique([organizationId, code])
   @@unique([organizationId, id])
@@ -166,13 +169,16 @@ model Project {
   createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  configurations ProjectConfiguration[]
-  amenities      ProjectAmenity[]
-  propertyTypes  ProjectPropertyType[]
-  files          ProjectFile[]
-  leadInterests  LeadProjectInterest[]
-  siteVisits     SiteVisit[]
-  bookings       Booking[]
+  configurations   ProjectConfiguration[]
+  amenities        ProjectAmenity[]
+  propertyTypes    ProjectPropertyType[]
+  files            ProjectFile[]
+  leadInterests    LeadProjectInterest[]
+  siteVisits       SiteVisit[]
+  bookings         Booking[]
+  commissionTerms  CommissionTerm[]
+  dealFinancials   DealFinancial[]
+  businessExpenses BusinessExpense[]
 
   @@unique([organizationId, code])
   @@unique([organizationId, id])

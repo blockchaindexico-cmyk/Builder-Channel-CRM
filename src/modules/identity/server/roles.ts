@@ -336,3 +336,32 @@ export async function deleteRole(ctx: ServiceContext, roleId: string): Promise<v
     });
   });
 }
+
+/**
+ * Creates a custom (non-system) role with the given grants unless a role with that key exists — for roles other
+ * modules offer organizations (M09's "Accounts"). The organization can edit or delete it afterwards.
+ */
+export async function ensureCustomRole(
+  db: TenantDbOrTx,
+  organizationId: string,
+  input: { key: string; name: string; description: string; grants: RoleGrant[] },
+): Promise<boolean> {
+  const existing = await db.role.findFirst({ where: { key: input.key }, select: { id: true } });
+  if (existing) return false;
+  const role = await db.role.create({
+    data: {
+      organizationId,
+      key: input.key,
+      name: input.name,
+      description: input.description,
+      isSystem: false,
+      seededPermissions: catalogue().map((permission) => permission.key),
+    },
+  });
+  if (input.grants.length) {
+    await db.rolePermission.createMany({
+      data: input.grants.map((grant) => ({ organizationId, roleId: role.id, ...grant })),
+    });
+  }
+  return true;
+}

@@ -9,4 +9,4 @@ export {
   listMemberOptions,
 } from "./server/members";
 export { getMyAvatarUrl } from "./server/profile";
-export { listRoleOptions, syncSystemRoles } from "./server/roles";
+export { ensureCustomRole, listRoleOptions, type RoleGrant, syncSystemRoles } from "./server/roles";

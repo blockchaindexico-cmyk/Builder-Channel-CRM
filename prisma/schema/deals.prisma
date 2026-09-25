@@ -223,8 +223,9 @@ model Booking {
   createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt           DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  history BookingHistory[]
-  files   BookingFile[]
+  history   BookingHistory[]
+  files     BookingFile[]
+  financial DealFinancial?
 
   @@unique([organizationId, number])
   @@unique([organizationId, id])

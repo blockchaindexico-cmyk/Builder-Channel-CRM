@@ -875,13 +875,13 @@ payout, executive incentive, other expenses, net revenue, net profit, status DRA
 - Money uses decimals with explicit rounding rules; taxes are configurable (e.g. split tax support).
 
 **Checklist**
-- [ ] **M09-01** Models & migrations (decimal money everywhere).
+- [x] **M09-01** Models & migrations (decimal money everywhere).
 - [ ] **M09-02** Billing settings: legal name, tax registration id, address, invoice prefix & fiscal-year numbering, tax rates, bank details, terms/footer.
-- [ ] **M09-03** Finance permissions (`finance.view|manage`, `billing.view|manage`, `commission.manage`) + optional "Accounts" role; financial fields hidden everywhere without permission.
+- [x] **M09-03** Finance permissions (`finance.view|manage`, `billing.view|manage`, `commission.manage`) + optional "Accounts" role; financial fields hidden everywhere without permission.
 
 *Commission & deal P&L*
-- [ ] **M09-04** Commission rate cards per builder/project (percentage, flat, slabs by value/volume) with validity periods.
-- [ ] **M09-05** Auto-create deal financials on `booking.closed` using the applicable rate (snapshot); recompute on value change until locked.
+- [x] **M09-04** Commission rate cards per builder/project (percentage, flat, slabs by value/volume) with validity periods.
+- [x] **M09-05** Auto-create deal financials on `booking.closed` using the applicable rate (snapshot); recompute on value change until locked.
 - [ ] **M09-06** Deal financial editor: gross commission, tax, TDS, cashback, payouts, incentive, other expenses → net revenue & net profit; confirm & lock; change history.
 
 *Billing*
@@ -896,7 +896,7 @@ payout, executive incentive, other expenses, net revenue, net profit, status DRA
 - [ ] **M09-13** Lost-opportunity report: count & estimated value of lost/not-interested leads and cancelled bookings by reason, builder, project, executive.
 - [ ] **M09-14** Billing reports: invoice register, collections register, outstanding; CSV/XLSX export.
 - [ ] **M09-15** Business expense ledger (*should-have*): marketing spend by source/campaign/project and overheads, feeding organization-level P&L and cost per lead.
-- [ ] **M09-16** Tests: commission calculation (%, flat, slabs, validity), tax split, rounding, fiscal-year numbering, payment transitions, financial permission isolation.
+- [x] **M09-16** Tests: commission calculation (%, flat, slabs, validity), tax split, rounding, fiscal-year numbering, payment transitions, financial permission isolation.
 
 **Acceptance criteria**
 - Closing a booking produces a deal financial record with commission computed from the rate card.

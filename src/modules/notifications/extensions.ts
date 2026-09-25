@@ -30,6 +30,8 @@ export interface AlertRule {
 export interface DigestLine {
   label: string;
   value: number;
+  /** Shown instead of `value` when set, e.g. a formatted amount (`value` still decides `attention`). */
+  display?: string;
   /** Path in the app that lists what is counted. */
   link?: string | null;
   /** Worth attention when above zero (shown in bold). */

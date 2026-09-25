@@ -1,0 +1,313 @@
+// M09 — Billing, commission & profit/loss (BUILD_PLAN M09). Money is always decimal (14, 2).
+
+enum CommissionType {
+  PERCENTAGE
+  FLAT
+  SLAB
+}
+
+enum CommissionSlabBasis {
+  /// Slabs by the booking's agreement value.
+  VALUE
+  /// Slabs by how many deals closed with the builder (or project) in the fiscal year, this one included.
+  VOLUME
+}
+
+/// Commission rate card of a builder, or of one of its projects (M09-04), valid between two dates.
+model CommissionTerm {
+  id             String               @id @default(uuid(7)) @db.Uuid
+  organizationId String               @map("organization_id") @db.Uuid
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  builderId      String               @map("builder_id") @db.Uuid
+  builder        Builder              @relation(fields: [organizationId, builderId], references: [organizationId, id], onDelete: Restrict)
+  /// Null = every project of the builder; a project's own card wins over the builder's.
+  projectId      String?              @map("project_id") @db.Uuid
+  project        Project?             @relation(fields: [organizationId, projectId], references: [organizationId, id], onDelete: Restrict)
+  name           String?
+  type           CommissionType
+  /// Percentage of the agreement value (PERCENTAGE).
+  percentage     Decimal?             @db.Decimal(6, 3)
+  /// Fixed amount per deal (FLAT).
+  flatAmount     Decimal?             @map("flat_amount") @db.Decimal(14, 2)
+  slabBasis      CommissionSlabBasis? @map("slab_basis")
+  /// SLAB: [{ from, to, percentage }] in ascending order; `to` null = no upper limit.
+  slabs          Json                 @default("[]")
+  validFrom      DateTime             @map("valid_from") @db.Date
+  validTo        DateTime?            @map("valid_to") @db.Date
+  notes          String?
+  isActive       Boolean              @default(true) @map("is_active")
+  createdById    String?              @map("created_by_id") @db.Uuid
+  createdByName  String               @map("created_by_name")
+  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  financials DealFinancial[]
+
+  @@unique([organizationId, id])
+  @@index([organizationId, builderId, projectId, validFrom])
+  @@map("commission_terms")
+}
+
+enum DealFinancialStatus {
+  DRAFT
+  /// Checked and locked: changes need an unlock with a reason.
+  CONFIRMED
+  /// The booking was cancelled after its closure: no longer counted.
+  CANCELLED
+}
+
+/// Revenue and profit of one closed deal (M09-05, M09-06): the commission from the rate card, snapshotted, and what
+/// the deal cost.
+model DealFinancial {
+  id                   String              @id @default(uuid(7)) @db.Uuid
+  organizationId       String              @map("organization_id") @db.Uuid
+  organization         Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bookingId            String              @map("booking_id") @db.Uuid
+  booking              Booking             @relation(fields: [organizationId, bookingId], references: [organizationId, id], onDelete: Cascade)
+  status               DealFinancialStatus @default(DRAFT)
+  /// Attribution copied from the booking (and kept in step with it) for reports.
+  builderId            String              @map("builder_id") @db.Uuid
+  builder              Builder             @relation(fields: [organizationId, builderId], references: [organizationId, id], onDelete: Restrict)
+  projectId            String              @map("project_id") @db.Uuid
+  project              Project             @relation(fields: [organizationId, projectId], references: [organizationId, id], onDelete: Restrict)
+  executiveId          String              @map("executive_id") @db.Uuid
+  executive            Membership          @relation("DealFinancialExecutive", fields: [organizationId, executiveId], references: [organizationId, id], onDelete: Restrict)
+  managerId            String?             @map("manager_id") @db.Uuid
+  manager              Membership?         @relation("DealFinancialManager", fields: [organizationId, managerId], references: [organizationId, id], onDelete: Restrict)
+  /// The day the revenue counts on: the deal's closing day in the organization's time zone.
+  recognizedOn         DateTime            @map("recognized_on") @db.Date
+  agreementValue       Decimal             @map("agreement_value") @db.Decimal(14, 2)
+  commissionTermId     String?             @map("commission_term_id") @db.Uuid
+  commissionTerm       CommissionTerm?     @relation(fields: [organizationId, commissionTermId], references: [organizationId, id], onDelete: Restrict)
+  /// How the commission was worked out, e.g. "2.5% of the agreement value (Skyline — standard)".
+  commissionBasis      String              @map("commission_basis")
+  /// Effective percentage of the agreement value (null for flat amounts).
+  commissionRate       Decimal?            @map("commission_rate") @db.Decimal(6, 3)
+  /// Entered by hand instead of the rate card (the reason is in the history).
+  commissionOverridden Boolean             @default(false) @map("commission_overridden")
+  grossCommission      Decimal             @map("gross_commission") @db.Decimal(14, 2)
+  /// Tax charged on the commission (collected for the government, not revenue).
+  taxRate              Decimal             @map("tax_rate") @db.Decimal(5, 2)
+  taxAmount            Decimal             @map("tax_amount") @db.Decimal(14, 2)
+  /// Tax the builder deducts at source when paying (a tax credit, not a cost).
+  tdsRate              Decimal             @map("tds_rate") @db.Decimal(5, 2)
+  tdsAmount            Decimal             @map("tds_amount") @db.Decimal(14, 2)
+  /// Passed on to the customer (reduces revenue).
+  cashback             Decimal             @default(0) @db.Decimal(14, 2)
+  subBrokerPayout      Decimal             @default(0) @map("sub_broker_payout") @db.Decimal(14, 2)
+  subBrokerName        String?             @map("sub_broker_name")
+  executiveIncentive   Decimal             @default(0) @map("executive_incentive") @db.Decimal(14, 2)
+  /// Sum of the deal's other expenses.
+  otherExpenses        Decimal             @default(0) @map("other_expenses") @db.Decimal(14, 2)
+  /// Gross commission minus cashback.
+  netRevenue           Decimal             @map("net_revenue") @db.Decimal(14, 2)
+  /// Net revenue minus payouts, incentive and other expenses.
+  netProfit            Decimal             @map("net_profit") @db.Decimal(14, 2)
+  notes                String?
+  confirmedAt          DateTime?           @map("confirmed_at") @db.Timestamptz(3)
+  confirmedByName      String?             @map("confirmed_by_name")
+  createdAt            DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  expenses     DealExpense[]
+  history      DealFinancialChange[]
+  invoiceLines InvoiceLine[]
+
+  @@unique([organizationId, bookingId])
+  @@unique([organizationId, id])
+  @@index([organizationId, recognizedOn])
+  @@index([organizationId, builderId, recognizedOn])
+  @@index([organizationId, projectId, recognizedOn])
+  @@index([organizationId, executiveId, recognizedOn])
+  @@index([organizationId, managerId, recognizedOn])
+  @@map("deal_financials")
+}
+
+/// An expense of one deal other than payouts and incentives (e.g. a gift, a site-visit cab).
+model DealExpense {
+  id              String        @id @default(uuid(7)) @db.Uuid
+  organizationId  String        @map("organization_id") @db.Uuid
+  dealFinancialId String        @map("deal_financial_id") @db.Uuid
+  dealFinancial   DealFinancial @relation(fields: [organizationId, dealFinancialId], references: [organizationId, id], onDelete: Cascade)
+  label           String
+  amount          Decimal       @db.Decimal(14, 2)
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([organizationId, dealFinancialId])
+  @@map("deal_expenses")
+}
+
+enum DealFinancialChangeType {
+  CREATED
+  RECALCULATED
+  UPDATED
+  CONFIRMED
+  UNLOCKED
+  CANCELLED
+}
+
+/// Every change of a deal's financials, with who, when and why (M09-06).
+model DealFinancialChange {
+  id              String                  @id @default(uuid(7)) @db.Uuid
+  organizationId  String                  @map("organization_id") @db.Uuid
+  dealFinancialId String                  @map("deal_financial_id") @db.Uuid
+  dealFinancial   DealFinancial           @relation(fields: [organizationId, dealFinancialId], references: [organizationId, id], onDelete: Cascade)
+  type            DealFinancialChangeType
+  /// { field: { from, to } } as display values.
+  changes         Json                    @default("{}")
+  reason          String?
+  actorId         String?                 @map("actor_id") @db.Uuid
+  actorName       String                  @map("actor_name")
+  occurredAt      DateTime                @default(now()) @map("occurred_at") @db.Timestamptz(3)
+
+  @@index([organizationId, dealFinancialId, occurredAt(sort: Desc)])
+  @@map("deal_financial_changes")
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  CANCELLED
+}
+
+/// An invoice to a builder for closed deals (M09-07). Issued invoices are cancelled, never deleted.
+model Invoice {
+  id             String        @id @default(uuid(7)) @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// Given when issued: sequential per organization and fiscal year, e.g. INV/2026-27/0001.
+  number         String?
+  fiscalYear     String?       @map("fiscal_year")
+  builderId      String        @map("builder_id") @db.Uuid
+  builder        Builder       @relation(fields: [organizationId, builderId], references: [organizationId, id], onDelete: Restrict)
+  status         InvoiceStatus @default(DRAFT)
+  issueDate      DateTime?     @map("issue_date") @db.Date
+  dueDate        DateTime?     @map("due_date") @db.Date
+  /// Seller and buyer details as printed, captured when issued.
+  seller         Json          @default("{}")
+  billTo         Json          @default("{}") @map("bill_to")
+  /// Tax split into two halves (e.g. CGST + SGST) when the builder is in the organization's state.
+  intraState     Boolean       @default(true) @map("intra_state")
+  subtotal       Decimal       @default(0) @db.Decimal(14, 2)
+  /// [{ label, rate, amount }]
+  taxLines       Json          @default("[]") @map("tax_lines")
+  taxTotal       Decimal       @default(0) @map("tax_total") @db.Decimal(14, 2)
+  total          Decimal       @default(0) @db.Decimal(14, 2)
+  /// Money received plus tax deducted at source by the builder.
+  amountSettled  Decimal       @default(0) @map("amount_settled") @db.Decimal(14, 2)
+  tdsDeducted    Decimal       @default(0) @map("tds_deducted") @db.Decimal(14, 2)
+  balance        Decimal       @default(0) @db.Decimal(14, 2)
+  notes          String?
+  pdfFileId      String?       @map("pdf_file_id") @db.Uuid
+  pdfFile        FileObject?   @relation(fields: [organizationId, pdfFileId], references: [organizationId, id], onDelete: Restrict)
+  sentAt         DateTime?     @map("sent_at") @db.Timestamptz(3)
+  sentTo         String?       @map("sent_to")
+  cancelledAt    DateTime?     @map("cancelled_at") @db.Timestamptz(3)
+  cancelReason   String?       @map("cancel_reason")
+  createdById    String?       @map("created_by_id") @db.Uuid
+  createdByName  String        @map("created_by_name")
+  issuedAt       DateTime?     @map("issued_at") @db.Timestamptz(3)
+  issuedByName   String?       @map("issued_by_name")
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  lines    InvoiceLine[]
+  payments Payment[]
+
+  @@unique([organizationId, number])
+  @@unique([organizationId, id])
+  @@index([organizationId, builderId, issueDate])
+  @@index([organizationId, status, dueDate])
+  @@map("invoices")
+}
+
+/// A line of an invoice: the commission of one deal, or an amount entered by hand.
+model InvoiceLine {
+  id              String         @id @default(uuid(7)) @db.Uuid
+  organizationId  String         @map("organization_id") @db.Uuid
+  invoiceId       String         @map("invoice_id") @db.Uuid
+  invoice         Invoice        @relation(fields: [organizationId, invoiceId], references: [organizationId, id], onDelete: Cascade)
+  dealFinancialId String?        @map("deal_financial_id") @db.Uuid
+  dealFinancial   DealFinancial? @relation(fields: [organizationId, dealFinancialId], references: [organizationId, id], onDelete: Restrict)
+  description     String
+  /// Service code printed on the line (e.g. SAC).
+  serviceCode     String?        @map("service_code")
+  amount          Decimal        @db.Decimal(14, 2)
+  sortOrder       Int            @default(0) @map("sort_order")
+
+  @@index([organizationId, invoiceId])
+  @@index([organizationId, dealFinancialId])
+  @@map("invoice_lines")
+}
+
+enum PaymentMode {
+  BANK_TRANSFER
+  CHEQUE
+  UPI
+  CASH
+  OTHER
+}
+
+/// Money received against an invoice (M09-09); a mistaken entry is voided with a reason, never deleted.
+model Payment {
+  id             String      @id @default(uuid(7)) @db.Uuid
+  organizationId String      @map("organization_id") @db.Uuid
+  invoiceId      String      @map("invoice_id") @db.Uuid
+  invoice        Invoice     @relation(fields: [organizationId, invoiceId], references: [organizationId, id], onDelete: Restrict)
+  receivedOn     DateTime    @map("received_on") @db.Date
+  amount         Decimal     @db.Decimal(14, 2)
+  tdsDeducted    Decimal     @default(0) @map("tds_deducted") @db.Decimal(14, 2)
+  mode           PaymentMode
+  reference      String?
+  notes          String?
+  recordedById   String?     @map("recorded_by_id") @db.Uuid
+  recordedByName String      @map("recorded_by_name")
+  voidedAt       DateTime?   @map("voided_at") @db.Timestamptz(3)
+  voidedByName   String?     @map("voided_by_name")
+  voidReason     String?     @map("void_reason")
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([organizationId, invoiceId])
+  @@index([organizationId, receivedOn])
+  @@map("payments")
+}
+
+enum BusinessExpenseCategory {
+  MARKETING
+  SALARIES
+  RENT
+  TRAVEL
+  SOFTWARE
+  OTHER
+}
+
+/// Organization-level expenses (M09-15): marketing spend and overheads, for the business P&L and cost per lead.
+model BusinessExpense {
+  id             String                  @id @default(uuid(7)) @db.Uuid
+  organizationId String                  @map("organization_id") @db.Uuid
+  organization   Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  spentOn        DateTime                @map("spent_on") @db.Date
+  category       BusinessExpenseCategory
+  description    String
+  amount         Decimal                 @db.Decimal(14, 2)
+  /// Marketing spend attributed to a lead source, campaign or project.
+  sourceId       String?                 @map("source_id") @db.Uuid
+  source         LeadSource?             @relation(fields: [organizationId, sourceId], references: [organizationId, id], onDelete: Restrict)
+  campaignId     String?                 @map("campaign_id") @db.Uuid
+  campaign       Campaign?               @relation(fields: [organizationId, campaignId], references: [organizationId, id], onDelete: Restrict)
+  projectId      String?                 @map("project_id") @db.Uuid
+  project        Project?                @relation(fields: [organizationId, projectId], references: [organizationId, id], onDelete: Restrict)
+  paidTo         String?                 @map("paid_to")
+  reference      String?
+  createdById    String?                 @map("created_by_id") @db.Uuid
+  createdByName  String                  @map("created_by_name")
+  deletedAt      DateTime?               @map("deleted_at") @db.Timestamptz(3)
+  createdAt      DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime                @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([organizationId, spentOn])
+  @@index([organizationId, category, spentOn])
+  @@map("business_expenses")
+}

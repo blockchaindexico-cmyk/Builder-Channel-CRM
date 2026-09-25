@@ -182,6 +182,10 @@ model Membership {
   bookingsCredited Booking[]   @relation("BookingExecutive")
   bookingsManaged  Booking[]   @relation("BookingManager")
 
+  // M09
+  dealsCredited DealFinancial[] @relation("DealFinancialExecutive")
+  dealsManaged  DealFinancial[] @relation("DealFinancialManager")
+
   @@unique([organizationId, userId])
   @@unique([organizationId, id])
   @@unique([organizationId, employeeCode])

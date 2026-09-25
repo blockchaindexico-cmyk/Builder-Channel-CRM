@@ -34,7 +34,7 @@ export function summarizeDigest(blocks: readonly DigestBlock[]): string {
   const lines = blocks.flatMap((block) => block.lines);
   const worth = lines.filter((line) => line.attention && line.value > 0);
   const shown = (worth.length ? worth : lines.slice(0, 1)).slice(0, 3);
-  return shown.map((line) => `${line.label}: ${line.value}`).join(" · ");
+  return shown.map((line) => `${line.label}: ${line.display ?? line.value}`).join(" · ");
 }
 
 /**

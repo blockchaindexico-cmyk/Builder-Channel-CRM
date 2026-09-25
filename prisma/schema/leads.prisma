@@ -26,8 +26,9 @@ model LeadSource {
   createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  campaigns Campaign[]
-  leads     Lead[]
+  campaigns        Campaign[]
+  leads            Lead[]
+  businessExpenses BusinessExpense[]
 
   @@unique([organizationId, code])
   @@unique([organizationId, name])
@@ -52,7 +53,8 @@ model Campaign {
   createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  leads Lead[]
+  leads            Lead[]
+  businessExpenses BusinessExpense[]
 
   @@unique([organizationId, code])
   @@unique([organizationId, id])
