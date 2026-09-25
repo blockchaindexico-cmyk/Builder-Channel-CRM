@@ -21,10 +21,18 @@ declare module "@/platform/events/types" {
     "lead.merged": { primaryLeadId: string; mergedLeadId: string };
     "lead.import_completed": {
       batchId: string;
+      createdById: string;
+      fileName: string;
       imported: number;
       duplicates: number;
       skipped: number;
       errors: number;
+    };
+    "lead.import_failed": {
+      batchId: string;
+      createdById: string;
+      fileName: string;
+      message: string;
     };
   }
 }

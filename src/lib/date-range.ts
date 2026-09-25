@@ -91,3 +91,35 @@ export function formatDateRangeLabel(range: DateRange, dateFormat = "dd MMM yyyy
   if (range.from === range.to) return format(from, dateFormat);
   return `${format(from, dateFormat)} – ${format(to, dateFormat)}`;
 }
+
+/** Calendar date (`yyyy-MM-dd`) and wall-clock time (`HH:mm`) of an instant in `timezone`. */
+export function zonedClock(instant: Date, timezone: string): { date: string; time: string } {
+  const local = new TZDate(instant, timezone);
+  return { date: format(local, ISO_DATE), time: format(local, "HH:mm") };
+}
+
+/** Value for an `<input type="datetime-local">` showing `value` in `timezone` ("" when empty). */
+export function toZonedInputValue(
+  value: string | Date | null | undefined,
+  timezone: string,
+): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return format(new TZDate(date, timezone), "yyyy-MM-dd'T'HH:mm");
+}
+
+/** Reads an `<input type="datetime-local">` value as a wall-clock time in `timezone`; returns UTC ISO or null. */
+export function fromZonedInputValue(value: string, timezone: string): string | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return null;
+  const [year, month, day, hour, minute] = match.slice(1).map(Number) as [
+    number,
+    number,
+    number,
+    number,
+    number,
+  ];
+  const local = new TZDate(year, month - 1, day, hour, minute, 0, timezone);
+  return new Date(local.getTime()).toISOString();
+}

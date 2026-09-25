@@ -296,7 +296,11 @@ async function recordProblem(
       AND "processed_rows" < ${processedRows}`;
 }
 
-async function failBatch(ctx: ServiceContext, batchId: string, message: string) {
+async function failBatch(
+  ctx: ServiceContext,
+  batch: { id: string; createdById: string; fileName: string },
+  message: string,
+) {
   const problem: ImportRowProblem = { row: 0, message };
   await ctx.db.$transaction(async (tx) => {
     // Rows handled before the failure stay in the report; the reason is added in front.
@@ -305,12 +309,18 @@ async function failBatch(ctx: ServiceContext, batchId: string, message: string) 
       SET "status" = 'FAILED',
           "completed_at" = now(),
           "errors" = ${JSON.stringify([problem])}::jsonb || "errors"
-      WHERE "id" = ${batchId}::uuid AND "organization_id" = ${ctx.organizationId}::uuid`;
+      WHERE "id" = ${batch.id}::uuid AND "organization_id" = ${ctx.organizationId}::uuid`;
     await recordAudit(tx, ctx, {
       action: "lead.import.fail",
       entityType: "LeadImportBatch",
-      entityId: batchId,
+      entityId: batch.id,
       summary: `Import failed: ${message}`,
+    });
+    await publishEvent(tx, ctx, "lead.import_failed", {
+      batchId: batch.id,
+      createdById: batch.createdById,
+      fileName: batch.fileName,
+      message,
     });
   });
 }
@@ -329,7 +339,7 @@ export async function runImportBatch(
   if (!ctx) {
     return failBatch(
       system,
-      batch.id,
+      batch,
       `${batch.createdByName} is no longer an active user, so the import was stopped.`,
     );
   }
@@ -337,7 +347,7 @@ export async function runImportBatch(
     !ctx.permissions.has(LEAD_PERMISSIONS.import) ||
     !ctx.permissions.has(LEAD_PERMISSIONS.create)
   ) {
-    return failBatch(system, batch.id, `${batch.createdByName} may no longer import leads.`);
+    return failBatch(system, batch, `${batch.createdByName} may no longer import leads.`);
   }
 
   await ctx.db.leadImportBatch.update({
@@ -352,7 +362,7 @@ export async function runImportBatch(
     if (!bytes) throw new ValidationError("The uploaded file is missing.");
     sheet = await readSheet(bytes);
   } catch (error) {
-    if (error instanceof ValidationError) return failBatch(ctx, batch.id, error.message);
+    if (error instanceof ValidationError) return failBatch(ctx, batch, error.message);
     throw error;
   }
 
@@ -471,6 +481,8 @@ async function finishBatch(
     });
     await publishEvent(tx, ctx, "lead.import_completed", {
       batchId,
+      createdById: batch.createdById,
+      fileName,
       imported: batch.importedRows,
       duplicates: batch.duplicateRows,
       skipped: batch.skippedRows,

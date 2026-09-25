@@ -1,0 +1,169 @@
+// M06 — Notifications & reminders engine (BUILD_PLAN M06).
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+}
+
+enum DeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum ReminderStatus {
+  SCHEDULED
+  SENT
+  CANCELLED
+}
+
+enum AnnouncementAudience {
+  ALL
+  ROLES
+  TEAM
+}
+
+/// One notification for one member. `channels` records where it went; the bell lists those with IN_APP.
+model Notification {
+  id             String                @id @default(uuid(7)) @db.Uuid
+  organizationId String                @map("organization_id") @db.Uuid
+  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  recipientId    String                @map("recipient_id") @db.Uuid
+  recipient      Membership            @relation("NotificationRecipient", fields: [organizationId, recipientId], references: [organizationId, id], onDelete: Cascade)
+  /// Notification type key from the registry, e.g. "lead.assigned".
+  type           String
+  category       String
+  title          String
+  body           String?
+  /// Path inside the app the notification opens, e.g. "/leads/…".
+  link           String?
+  entityType     String?               @map("entity_type")
+  entityId       String?               @map("entity_id") @db.Uuid
+  priority       NotificationPriority  @default(NORMAL)
+  channels       NotificationChannel[]
+  actorName      String?               @map("actor_name")
+  /// Structured content for type-specific templates, e.g. the sections of the daily summary.
+  data           Json?
+  /// Makes retried events, reminders and digests notify once (unique per recipient).
+  idempotencyKey String?               @map("idempotency_key")
+  /// Grouped notifications (e.g. one bulk assignment) count their events instead of repeating them.
+  groupCount     Int                   @default(1) @map("group_count")
+  readAt         DateTime?             @map("read_at") @db.Timestamptz(3)
+  createdAt      DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  deliveries NotificationDelivery[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, recipientId, idempotencyKey])
+  @@index([organizationId, recipientId, createdAt(sort: Desc)])
+  @@index([organizationId, recipientId, readAt])
+  @@map("notifications")
+}
+
+/// Delivery of a notification on a channel other than in-app (e-mail), with status and attempts.
+model NotificationDelivery {
+  id             String              @id @default(uuid(7)) @db.Uuid
+  organizationId String              @map("organization_id") @db.Uuid
+  notificationId String              @map("notification_id") @db.Uuid
+  notification   Notification        @relation(fields: [organizationId, notificationId], references: [organizationId, id], onDelete: Cascade)
+  channel        NotificationChannel
+  status         DeliveryStatus      @default(PENDING)
+  attempts       Int                 @default(0)
+  lastError      String?             @map("last_error")
+  sentAt         DateTime?           @map("sent_at") @db.Timestamptz(3)
+  createdAt      DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([organizationId, notificationId, channel])
+  @@index([status, createdAt])
+  @@map("notification_deliveries")
+}
+
+/// A member's choice for one type on one channel (absent = the organization's default).
+model NotificationPreference {
+  id             String              @id @default(uuid(7)) @db.Uuid
+  organizationId String              @map("organization_id") @db.Uuid
+  membershipId   String              @map("membership_id") @db.Uuid
+  membership     Membership          @relation("NotificationPreferenceMember", fields: [organizationId, membershipId], references: [organizationId, id], onDelete: Cascade)
+  type           String
+  channel        NotificationChannel
+  enabled        Boolean
+  updatedAt      DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([organizationId, membershipId, type, channel])
+  @@map("notification_preferences")
+}
+
+/// A reminder due at `fireAt` (source of truth); a delayed job delivers it, a sweep recovers missed jobs.
+model ScheduledReminder {
+  id             String         @id @default(uuid(7)) @db.Uuid
+  organizationId String         @map("organization_id") @db.Uuid
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  recipientId    String         @map("recipient_id") @db.Uuid
+  recipient      Membership     @relation("ReminderRecipient", fields: [organizationId, recipientId], references: [organizationId, id], onDelete: Cascade)
+  type           String
+  /// One live reminder per key, e.g. "follow-up:<id>" — scheduling again moves it.
+  dedupeKey      String?        @map("dedupe_key")
+  fireAt         DateTime       @map("fire_at") @db.Timestamptz(3)
+  status         ReminderStatus @default(SCHEDULED)
+  title          String
+  body           String?
+  link           String?
+  entityType     String?        @map("entity_type")
+  entityId       String?        @map("entity_id") @db.Uuid
+  notificationId String?        @map("notification_id") @db.Uuid
+  sentAt         DateTime?      @map("sent_at") @db.Timestamptz(3)
+  cancelledAt    DateTime?      @map("cancelled_at") @db.Timestamptz(3)
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([organizationId, dedupeKey])
+  @@index([status, fireAt])
+  @@map("scheduled_reminders")
+}
+
+model Announcement {
+  id             String               @id @default(uuid(7)) @db.Uuid
+  organizationId String               @map("organization_id") @db.Uuid
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title          String
+  body           String
+  audience       AnnouncementAudience @default(ALL)
+  /// Roles that see it (audience ROLES).
+  roleIds        String[]             @default([]) @map("role_ids") @db.Uuid
+  /// Manager whose reporting tree sees it (audience TEAM).
+  teamOfId       String?              @map("team_of_id") @db.Uuid
+  /// Visible from this moment (null = draft).
+  publishedAt    DateTime?            @map("published_at") @db.Timestamptz(3)
+  expiresAt      DateTime?            @map("expires_at") @db.Timestamptz(3)
+  /// When the audience was notified (once, when the announcement went live).
+  notifiedAt     DateTime?            @map("notified_at") @db.Timestamptz(3)
+  createdByName  String               @map("created_by_name")
+  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  reads AnnouncementRead[]
+
+  @@unique([organizationId, id])
+  @@index([organizationId, publishedAt])
+  @@map("announcements")
+}
+
+model AnnouncementRead {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  announcementId String       @map("announcement_id") @db.Uuid
+  announcement   Announcement @relation(fields: [organizationId, announcementId], references: [organizationId, id], onDelete: Cascade)
+  membershipId   String       @map("membership_id") @db.Uuid
+  membership     Membership   @relation("AnnouncementReader", fields: [organizationId, membershipId], references: [organizationId, id], onDelete: Cascade)
+  readAt         DateTime     @default(now()) @map("read_at") @db.Timestamptz(3)
+
+  @@unique([organizationId, announcementId, membershipId])
+  @@map("announcement_reads")
+}

@@ -25,6 +25,10 @@ export interface AppShellProps {
   user: ShellUser;
   permissions: readonly string[];
   defaultCollapsed?: boolean;
+  /** Top-bar controls contributed by modules (`app.header.action`). */
+  headerActions?: ReactNode;
+  /** Messages above the page contributed by modules (`app.banner`). */
+  banner?: ReactNode;
   children: ReactNode;
 }
 
@@ -63,6 +67,8 @@ export function AppShell({
   user,
   permissions,
   defaultCollapsed = false,
+  headerActions,
+  banner,
   children,
 }: AppShellProps) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
@@ -133,11 +139,13 @@ export function AppShell({
             {organization.name}
           </div>
           <div className="ml-auto flex items-center gap-1">
+            {headerActions}
             <ThemeToggle />
             <UserMenu user={user} />
           </div>
         </header>
         <main id="main-content" className="flex-1 px-4 py-6 md:px-6 lg:px-8">
+          {banner}
           {children}
         </main>
       </div>

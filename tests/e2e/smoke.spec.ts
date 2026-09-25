@@ -86,6 +86,12 @@ test.describe("smoke", () => {
       "/settings/assignment/rules",
       "/settings/assignment/reasons",
       "/settings/assignment/options",
+      // M06
+      "/notifications",
+      "/announcements",
+      "/profile?tab=notifications",
+      "/settings/notifications",
+      "/settings/announcements",
     ];
     for (const path of paths) {
       await page.goto(path);

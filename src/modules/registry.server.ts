@@ -9,6 +9,7 @@ import { assignmentServerModule } from "./assignment/server";
 import { catalogServerModule } from "./catalog/server";
 import { identityServerModule } from "./identity/server";
 import { leadsServerModule } from "./leads/server";
+import { notificationsServerModule } from "./notifications/server";
 import { organizationServerModule } from "./organization/server";
 
 /**
@@ -22,6 +23,7 @@ export const serverModules: readonly ServerModule[] = [
   catalogServerModule,
   leadsServerModule,
   assignmentServerModule,
+  notificationsServerModule,
 ];
 
 let registry: ServerRegistry | undefined;

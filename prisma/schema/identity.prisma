@@ -168,6 +168,12 @@ model Membership {
   leadAssignments         LeadAssignment[] @relation("LeadAssignmentAssignee")
   previousLeadAssignments LeadAssignment[] @relation("LeadAssignmentPrevious")
 
+  // M06
+  notifications           Notification[]           @relation("NotificationRecipient")
+  notificationPreferences NotificationPreference[] @relation("NotificationPreferenceMember")
+  reminders               ScheduledReminder[]      @relation("ReminderRecipient")
+  announcementReads       AnnouncementRead[]       @relation("AnnouncementReader")
+
   @@unique([organizationId, userId])
   @@unique([organizationId, id])
   @@unique([organizationId, employeeCode])

@@ -115,6 +115,21 @@ export async function listRoles(ctx: ServiceContext): Promise<RoleSummary[]> {
   }));
 }
 
+/**
+ * Role names for pickers in other modules (e.g. an announcement's audience). Names are not sensitive inside an
+ * organization, so no permission is required.
+ */
+export async function listRoleOptions(
+  db: TenantDbOrTx,
+  options: { ids?: readonly string[] } = {},
+): Promise<{ id: string; key: string; name: string }[]> {
+  return db.role.findMany({
+    where: options.ids ? { id: { in: [...options.ids] } } : {},
+    orderBy: [{ isSystem: "desc" }, { name: "asc" }],
+    select: { id: true, key: true, name: true },
+  });
+}
+
 /** Roles available in pickers (user form) — readable by anyone who can manage users. */
 export async function listAssignableRoles(ctx: ServiceContext) {
   ctx.permissions.assert(IDENTITY_PERMISSIONS.usersManage);

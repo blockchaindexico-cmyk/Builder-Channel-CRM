@@ -24,6 +24,8 @@ export { findVisibleLead, isLeadInScope, leadScopeWhere } from "./server/scope";
 export {
   countLeadsByOwner,
   countOpenLeadsByOwner,
+  type LeadSummary,
+  listLeadSummaries,
   listOpenLeadIdsOfOwner,
   OPEN_STATUS_CATEGORIES,
   type OwnerLeadCounts,

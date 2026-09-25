@@ -40,6 +40,10 @@ model Organization {
   leadAssignments     LeadAssignment[]
   reassignmentReasons ReassignmentReason[]
   assignmentRules     AssignmentRule[]
+  // M06
+  notifications       Notification[]
+  scheduledReminders  ScheduledReminder[]
+  announcements       Announcement[]
 
   @@map("organizations")
 }

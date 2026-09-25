@@ -714,8 +714,8 @@ user preferences, announcements and manager alerts that every module plugs into.
 (channel, status, attempts, error), `NotificationPreference` (member × type × channel), `ScheduledReminder`
 (fire at, type, entity, recipient, status, job id), `Announcement`, `AnnouncementRead`, `WebPushSubscription` (optional).
 
-**Key screens:** notification bell & dropdown, `/notifications`, `/profile/notifications`, `/settings/notifications`,
-`/settings/announcements`.
+**Key screens:** notification bell & dropdown, `/notifications`, `/profile?tab=notifications`, `/announcements`,
+`/settings/notifications`, `/settings/announcements`.
 
 **Business rules**
 - Modules register notification **types** (key, default channels, templates, deep link); the engine applies org settings then user preferences.
@@ -723,20 +723,20 @@ user preferences, announcements and manager alerts that every module plugs into.
 - Critical types (e.g., new assignment) cannot be fully disabled by users — only their channel choice.
 
 **Checklist**
-- [ ] **M06-01** Models & migrations.
-- [ ] **M06-02** Notification type registry (key, category, default channels, in-app + email templates, deep-link builder).
-- [ ] **M06-03** `notify()` service: resolve recipients, apply org settings & preferences, create in-app notification, enqueue channel deliveries (idempotency key).
-- [ ] **M06-04** Email channel: React Email templates, delivery job with retries, delivery status tracking.
-- [ ] **M06-05** Reminder scheduler API (`schedule`, `reschedule`, `cancel`) backed by `ScheduledReminder` + pg-boss delayed jobs; recovery sweep.
-- [ ] **M06-06** Notification center: bell with unread count (polling; SSE optional), recent dropdown, full page with filters, mark read/unread, mark all read, deep links.
-- [ ] **M06-07** User notification preferences (type × channel) in Profile.
-- [ ] **M06-08** Organization notification settings (Admin): enable/disable types, default channels, default reminder lead time, digest time.
-- [ ] **M06-09** Announcements: create (audience: all / role / team; publish & expiry), banner + notification, read tracking.
-- [ ] **M06-10** Wire existing events: lead assigned/reassigned → new owner (+ previous owner & manager); duplicate detected → original owner; import completed/failed → importer.
-- [ ] **M06-11** Manager alert rules framework (scheduled evaluation, e.g. unworked leads > N hours) that M07/M08 extend.
-- [ ] **M06-12** Daily digest email for managers/admins (pending, overdue, unassigned) sent in the organization's timezone.
-- [ ] **M06-13** Browser web-push notifications (*could-have*).
-- [ ] **M06-14** Tests: preference filtering, reminder schedule/reschedule/cancel idempotency, digest timing across time zones, read/unread.
+- [x] **M06-01** Models & migrations.
+- [x] **M06-02** Notification type registry (key, category, default channels, in-app + email templates, deep-link builder).
+- [x] **M06-03** `notify()` service: resolve recipients, apply org settings & preferences, create in-app notification, enqueue channel deliveries (idempotency key).
+- [x] **M06-04** Email channel: React Email templates, delivery job with retries, delivery status tracking.
+- [x] **M06-05** Reminder scheduler API (`schedule`, `reschedule`, `cancel`) backed by `ScheduledReminder` + pg-boss delayed jobs; recovery sweep.
+- [x] **M06-06** Notification center: bell with unread count (polling; SSE optional), recent dropdown, full page with filters, mark read/unread, mark all read, deep links.
+- [x] **M06-07** User notification preferences (type × channel) in Profile.
+- [x] **M06-08** Organization notification settings (Admin): enable/disable types, default channels, default reminder lead time, digest time.
+- [x] **M06-09** Announcements: create (audience: all / role / team; publish & expiry), banner + notification, read tracking.
+- [x] **M06-10** Wire existing events: lead assigned/reassigned → new owner (+ previous owner & manager); duplicate detected → original owner; import completed/failed → importer.
+- [x] **M06-11** Manager alert rules framework (scheduled evaluation, e.g. unworked leads > N hours) that M07/M08 extend.
+- [x] **M06-12** Daily digest email for managers/admins (pending, overdue, unassigned) sent in the organization's timezone.
+- [ ] **M06-13** Browser web-push notifications (*could-have*) — deferred after v1 (D-037).
+- [x] **M06-14** Tests: preference filtering, reminder schedule/reschedule/cancel idempotency, digest timing across time zones, read/unread.
 
 **Acceptance criteria**
 - Assigning or reassigning a lead notifies the new executive in-app and by email within a minute.

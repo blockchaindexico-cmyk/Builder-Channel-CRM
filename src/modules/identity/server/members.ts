@@ -1,5 +1,5 @@
 import type { Prisma } from "@/generated/prisma/client";
-import type { MembershipStatus } from "@/generated/prisma/enums";
+import type { DataScope, MembershipStatus } from "@/generated/prisma/enums";
 import type { TableQuery } from "@/lib/table-query";
 import { recordAudit } from "@/platform/audit";
 import { sendInvitationEmail, sendPasswordResetEmail } from "@/platform/auth/emails";
@@ -551,25 +551,83 @@ export async function assertCanViewMember(
  * Members for other modules' checks and pickers (e.g. who may own leads): optionally only these ids, only active
  * members, only roles that grant `withPermission`. Works inside the caller's transaction; no permission check.
  */
+export interface FoundMember {
+  membershipId: string;
+  name: string;
+  email: string;
+  status: MembershipStatus;
+  roleId: string;
+  roleKey: string;
+  reportsToId: string | null;
+  /** Whether anyone reports to this member (a manager). */
+  hasReports: boolean;
+  /** Data scope of `withPermission` (null when not asked or held without a scope). */
+  scope: DataScope | null;
+}
+
+/**
+ * Members for background work in other modules (notification recipients, digests…): no permission check, callers
+ * decide who is relevant. `withPermission` keeps members whose role holds it, optionally only with `scopes`.
+ */
 export async function findMembers(
   db: TenantDbOrTx,
-  options: { ids?: readonly string[]; activeOnly?: boolean; withPermission?: string } = {},
-): Promise<{ membershipId: string; name: string; status: MembershipStatus }[]> {
+  options: {
+    ids?: readonly string[];
+    activeOnly?: boolean;
+    withPermission?: string;
+    scopes?: readonly DataScope[];
+    managersOnly?: boolean;
+    roleIds?: readonly string[];
+  } = {},
+): Promise<FoundMember[]> {
+  const permission = options.withPermission;
   const members = await db.membership.findMany({
     where: {
       ...(options.ids ? { id: { in: [...options.ids] } } : {}),
       ...(options.activeOnly ? { status: "ACTIVE" as const } : {}),
-      ...(options.withPermission
-        ? { role: { permissions: { some: { permission: options.withPermission } } } }
+      ...(permission
+        ? {
+            role: {
+              permissions: {
+                some: {
+                  permission,
+                  ...(options.scopes ? { scope: { in: [...options.scopes] } } : {}),
+                },
+              },
+            },
+          }
         : {}),
+      ...(options.roleIds ? { roleId: { in: [...options.roleIds] } } : {}),
+      ...(options.managersOnly ? { directReports: { some: {} } } : {}),
     },
     orderBy: { user: { name: "asc" } },
-    select: { id: true, status: true, user: { select: { name: true } } },
+    select: {
+      id: true,
+      status: true,
+      reportsToId: true,
+      user: { select: { name: true, email: true } },
+      role: {
+        select: {
+          id: true,
+          key: true,
+          permissions: permission
+            ? { where: { permission }, select: { scope: true } }
+            : { take: 0, select: { scope: true } },
+        },
+      },
+      _count: { select: { directReports: true } },
+    },
   });
   return members.map((member) => ({
     membershipId: member.id,
     name: member.user.name,
+    email: member.user.email,
     status: member.status,
+    roleId: member.role.id,
+    roleKey: member.role.key,
+    reportsToId: member.reportsToId,
+    hasReports: member._count.directReports > 0,
+    scope: member.role.permissions[0]?.scope ?? null,
   }));
 }
 

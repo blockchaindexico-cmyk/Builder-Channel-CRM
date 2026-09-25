@@ -117,3 +117,25 @@ export async function listOpenLeadIdsOfOwner(db: TenantDbOrTx, ownerId: string):
   });
   return leads.map((lead) => lead.id);
 }
+
+export interface LeadSummary {
+  id: string;
+  number: string;
+  name: string;
+  ownerId: string | null;
+}
+
+/**
+ * Number, name and owner of leads for messages (notifications, reminders). No permission check: callers only
+ * pass leads they are already dealing with. Deleted leads are left out.
+ */
+export async function listLeadSummaries(
+  db: TenantDbOrTx,
+  leadIds: readonly string[],
+): Promise<LeadSummary[]> {
+  if (leadIds.length === 0) return [];
+  return db.lead.findMany({
+    where: { id: { in: [...leadIds] }, deletedAt: null },
+    select: { id: true, number: true, name: true, ownerId: true },
+  });
+}

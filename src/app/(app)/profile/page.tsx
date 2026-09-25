@@ -1,4 +1,4 @@
-import { Bell, ChartNoAxesColumn } from "lucide-react";
+import { ChartNoAxesColumn } from "lucide-react";
 import type { Metadata } from "next";
 
 import { EmptyState } from "@/components/shared/empty-state";
@@ -13,17 +13,26 @@ import { SessionsList } from "@/modules/identity/components/profile/sessions-lis
 import { getMyProfile } from "@/modules/identity/server/profile";
 import { listMySessions } from "@/modules/identity/server/sessions";
 import { getRegionalSettings } from "@/modules/organization";
+import { uiRegistry } from "@/modules/registry.ui";
 import { getCurrentSessionId, getRequestContext } from "@/platform/tenant/request-context";
 
 export const metadata: Metadata = { title: "My profile" };
 
-/** Own profile (M02-15 → M02-17). */
+/** Own profile (M02-15 → M02-17); other modules add tabs through `profile.tab` (M06 notifications). */
 export default async function ProfilePage() {
   const ctx = await getRequestContext();
-  const [profile, sessions, regional] = await Promise.all([
+  const contributed = [...uiRegistry.extensions("profile.tab")].sort((a, b) => a.order - b.order);
+  const [profile, sessions, regional, extraTabs] = await Promise.all([
     getMyProfile(ctx),
     getCurrentSessionId().then((sessionId) => listMySessions(ctx, sessionId)),
     getRegionalSettings(ctx),
+    Promise.all(
+      contributed.map(async (tab) => ({
+        value: tab.key,
+        label: tab.label,
+        content: await tab.render(),
+      })),
+    ),
   ]);
 
   const workDetails: [string, string][] = [
@@ -104,17 +113,7 @@ export default async function ProfilePage() {
               </div>
             ),
           },
-          {
-            value: "notifications",
-            label: "Notifications",
-            content: (
-              <EmptyState
-                icon={Bell}
-                title="Notification preferences"
-                description="Soon you can choose which follow-up reminders and alerts you receive in the app and by e-mail."
-              />
-            ),
-          },
+          ...extraTabs,
           {
             value: "activity",
             label: "Activity",
