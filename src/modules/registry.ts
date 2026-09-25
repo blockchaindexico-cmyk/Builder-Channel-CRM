@@ -2,6 +2,7 @@ import { composeRegistry } from "@/platform/registry/compose";
 import type { ModuleManifest } from "@/platform/registry/types";
 
 import { activitiesManifest } from "./activities/manifest";
+import { analyticsManifest } from "./analytics/manifest";
 import { assignmentManifest } from "./assignment/manifest";
 import { billingManifest } from "./billing/manifest";
 import { catalogManifest } from "./catalog/manifest";
@@ -27,6 +28,7 @@ export const moduleManifests: readonly ModuleManifest[] = [
   activitiesManifest,
   dealsManifest,
   billingManifest,
+  analyticsManifest,
 ];
 
 export const appRegistry = composeRegistry(moduleManifests);

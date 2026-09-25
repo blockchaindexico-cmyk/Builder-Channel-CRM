@@ -6,6 +6,7 @@ import {
 import { platformServerModule } from "@/platform/server-module";
 
 import { activitiesServerModule } from "./activities/server";
+import { analyticsServerModule } from "./analytics/server";
 import { assignmentServerModule } from "./assignment/server";
 import { billingServerModule } from "./billing/server";
 import { catalogServerModule } from "./catalog/server";
@@ -30,6 +31,7 @@ export const serverModules: readonly ServerModule[] = [
   activitiesServerModule,
   dealsServerModule,
   billingServerModule,
+  analyticsServerModule,
 ];
 
 let registry: ServerRegistry | undefined;

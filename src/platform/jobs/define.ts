@@ -1,4 +1,4 @@
-import type { QueueOptions } from "pg-boss";
+import type { QueueOptions, QueuePolicy } from "pg-boss";
 import type { z } from "zod";
 
 import type { Logger } from "@/platform/logger";
@@ -19,8 +19,8 @@ export interface JobDefinition<TData = unknown> {
   /** Validates the payload before the handler runs (and when enqueuing). */
   schema?: z.ZodType<TData>;
   handler: (data: TData, job: JobRunContext) => Promise<void>;
-  /** Retry/expiry/retention defaults for the queue. */
-  queue?: QueueOptions;
+  /** Retry/expiry/retention defaults for the queue, and its policy (e.g. `short`: one queued job per singleton key). */
+  queue?: QueueOptions & { policy?: QueuePolicy };
   /** Recurring schedule (cron, evaluated in `tz`, default UTC). */
   cron?: { expression: string; tz?: string; data?: TData };
   /** Parallel jobs processed per worker process. Default 1. */

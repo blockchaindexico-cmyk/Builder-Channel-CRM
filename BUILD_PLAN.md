@@ -924,9 +924,9 @@ organization dashboard — and deliver every report listed in the PRD with filte
 **Checklist**
 
 *Metrics foundation*
-- [ ] **M10-01** Metrics service with documented definitions; every metric honours data scope and filters (date, builder, project, manager, executive, source, status).
-- [ ] **M10-02** Org-timezone date bucketing (day / week / month / custom) and previous-period comparison.
-- [ ] **M10-03** Aggregation tables refreshed incrementally from events + nightly reconciliation job; report indexes.
+- [x] **M10-01** Metrics service with documented definitions; every metric honours data scope and filters (date, builder, project, manager, executive, source, status).
+- [x] **M10-02** Org-timezone date bucketing (day / week / month / custom) and previous-period comparison.
+- [x] **M10-03** Aggregation tables refreshed incrementally from events + nightly reconciliation job; report indexes.
 
 *Dashboards*
 - [ ] **M10-04** Executive "My Day" (PRD §10): today's assigned, new/open, calls completed (positive/negative/unresponsive), callbacks due, follow-ups due, visits, revisits, bookings, closed, lost, not interested, pending list; history by day/week/month/custom.

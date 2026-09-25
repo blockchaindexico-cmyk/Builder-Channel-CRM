@@ -1,0 +1,84 @@
+// M10 — Dashboards, reports & analytics (BUILD_PLAN §4 M10).
+
+/// Per member and local day counters (M10-03): the unfiltered output of the metrics service, refreshed from events
+/// and reconciled nightly, so dashboards and leaderboards read one small table.
+model DailyMemberStats {
+  organizationId     String       @map("organization_id") @db.Uuid
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  membershipId       String       @map("membership_id") @db.Uuid
+  membership         Membership   @relation(fields: [organizationId, membershipId], references: [organizationId, id], onDelete: Cascade)
+  /// Calendar day in the organization's time zone.
+  day                DateTime     @db.Date
+  leadsAssigned      Int          @default(0) @map("leads_assigned")
+  leadsCreated       Int          @default(0) @map("leads_created")
+  calls              Int          @default(0)
+  callsConnected     Int          @default(0) @map("calls_connected")
+  callsPositive      Int          @default(0) @map("calls_positive")
+  callsNegative      Int          @default(0) @map("calls_negative")
+  callsUnresponsive  Int          @default(0) @map("calls_unresponsive")
+  callsCallback      Int          @default(0) @map("calls_callback")
+  talkSeconds        Int          @default(0) @map("talk_seconds")
+  followUpsDue       Int          @default(0) @map("follow_ups_due")
+  followUpsCompleted Int          @default(0) @map("follow_ups_completed")
+  followUpsOnTime    Int          @default(0) @map("follow_ups_on_time")
+  followUpsMissed    Int          @default(0) @map("follow_ups_missed")
+  visitsCompleted    Int          @default(0) @map("visits_completed")
+  revisitsCompleted  Int          @default(0) @map("revisits_completed")
+  visitsNoShow       Int          @default(0) @map("visits_no_show")
+  bookings           Int          @default(0)
+  closures           Int          @default(0)
+  bookingsCancelled  Int          @default(0) @map("bookings_cancelled")
+  lost               Int          @default(0)
+  notInterested      Int          @default(0) @map("not_interested")
+  refreshedAt        DateTime     @default(now()) @map("refreshed_at") @db.Timestamptz(3)
+
+  @@id([organizationId, membershipId, day])
+  @@index([organizationId, day])
+  @@map("daily_member_stats")
+}
+
+/// Leads per owner and status at the end of each day (M10-03), for pipeline trends.
+model DailyLeadSnapshot {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  day            DateTime     @db.Date
+  ownerId        String?      @map("owner_id") @db.Uuid
+  statusId       String       @map("status_id") @db.Uuid
+  count          Int
+
+  @@unique([organizationId, day, ownerId, statusId])
+  @@index([organizationId, day])
+  @@map("daily_lead_snapshots")
+}
+
+enum ReportExportStatus {
+  QUEUED
+  RUNNING
+  READY
+  FAILED
+}
+
+/// A report export (M10-18): small ones are generated on request, large ones by the worker and then downloaded.
+model ReportExport {
+  id             String             @id @default(uuid(7)) @db.Uuid
+  organizationId String             @map("organization_id") @db.Uuid
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  requestedById  String             @map("requested_by_id") @db.Uuid
+  requestedBy    Membership         @relation(fields: [organizationId, requestedById], references: [organizationId, id], onDelete: Cascade)
+  report         String
+  format         String
+  /// Filters as chosen on screen (validated again when the export runs).
+  filters        Json               @default("{}")
+  status         ReportExportStatus @default(QUEUED)
+  rowCount       Int?               @map("row_count")
+  fileId         String?            @map("file_id") @db.Uuid
+  file           FileObject?        @relation(fields: [organizationId, fileId], references: [organizationId, id], onDelete: Restrict)
+  error          String?
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  completedAt    DateTime?          @map("completed_at") @db.Timestamptz(3)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, requestedById, createdAt(sort: Desc)])
+  @@map("report_exports")
+}

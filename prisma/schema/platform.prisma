@@ -59,6 +59,9 @@ model Organization {
   dealFinancials      DealFinancial[]
   invoices            Invoice[]
   businessExpenses    BusinessExpense[]
+  dailyMemberStats    DailyMemberStats[]
+  dailyLeadSnapshots  DailyLeadSnapshot[]
+  reportExports       ReportExport[]
 
   @@map("organizations")
 }
@@ -189,12 +192,13 @@ model FileObject {
   updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt      DateTime?    @map("deleted_at") @db.Timestamptz(3)
 
-  projectFiles ProjectFile[]
-  builderFiles BuilderFile[]
-  leadFiles    LeadFile[]
-  callLogs     CallLog[]
-  bookingFiles BookingFile[]
-  invoicePdfs  Invoice[]
+  projectFiles  ProjectFile[]
+  builderFiles  BuilderFile[]
+  leadFiles     LeadFile[]
+  callLogs      CallLog[]
+  bookingFiles  BookingFile[]
+  invoicePdfs   Invoice[]
+  reportExports ReportExport[]
 
   @@unique([organizationId, id])
   @@index([organizationId, purpose, createdAt(sort: Desc)])
