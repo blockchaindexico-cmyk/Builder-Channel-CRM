@@ -13,6 +13,7 @@ import { DEAL_PERMISSIONS } from "@/modules/deals/permissions";
 import { type BookingDetail, getBooking } from "@/modules/deals/server/bookings";
 import { listBookingStages } from "@/modules/deals/server/masters";
 import { getRegionalSettings } from "@/modules/organization";
+import { uiRegistry } from "@/modules/registry.ui";
 import { loadOrNotFound, routeId } from "@/platform/pages";
 import { requirePermission } from "@/platform/rbac/guard";
 import { getRequestContext } from "@/platform/tenant/request-context";
@@ -95,9 +96,19 @@ export default async function BookingPage({ params }: PageProps<"/bookings/[id]"
   const ctx = await getRequestContext();
   requirePermission(ctx, DEAL_PERMISSIONS.bookingsView);
   const booking = await loadOrNotFound(getBooking(ctx, routeId((await params).id)));
-  const [regional, stages] = await Promise.all([
+  const [regional, stages, panels] = await Promise.all([
     getRegionalSettings(ctx),
     listBookingStages(ctx, { activeOnly: true }),
+    Promise.all(
+      uiRegistry
+        .extensions("booking.detail.panel")
+        .filter((panel) => !panel.permission || ctx.permissions.has(panel.permission))
+        .toSorted((a, b) => a.order - b.order)
+        .map(async (panel) => ({
+          key: panel.key,
+          content: await panel.render({ bookingId: booking.id }),
+        })),
+    ),
   ]);
   const money = (value: string | null) => (value ? formatMoney(value, regional) : null);
   return (
@@ -226,6 +237,10 @@ export default async function BookingPage({ params }: PageProps<"/bookings/[id]"
             </CardContent>
           </Card>
         </div>
+
+        {panels.map((panel) => (
+          <div key={panel.key}>{panel.content}</div>
+        ))}
 
         {booking.remarks ? (
           <Card>

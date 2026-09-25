@@ -105,15 +105,27 @@ function totalsOf(amounts: string[], settings: BillingSettings, intraState: bool
   return { subtotal, taxLines, taxTotal, total: toMoney(dec(subtotal).plus(dec(taxTotal))) };
 }
 
-/** Deals of a builder that can be billed: not cancelled, with a commission, on no open invoice. */
-export async function listBillableDeals(ctx: ServiceContext, builderId: string) {
+/**
+ * Deals of a builder that can be billed: not cancelled, with a commission, on no invoice other than `invoiceId` (the
+ * draft being edited) unless that one was cancelled.
+ */
+export async function listBillableDeals(
+  ctx: ServiceContext,
+  builderId: string,
+  invoiceId: string | null = null,
+) {
   ctx.permissions.assert(BILLING_PERMISSIONS.billingView);
   const deals = await ctx.db.dealFinancial.findMany({
     where: {
       builderId,
       status: { not: "CANCELLED" },
       grossCommission: { gt: 0 },
-      invoiceLines: { none: { invoice: { status: { not: "CANCELLED" } } } },
+      invoiceLines: {
+        none: {
+          invoice: { status: { not: "CANCELLED" } },
+          ...(invoiceId ? { invoiceId: { not: invoiceId } } : {}),
+        },
+      },
     },
     include: {
       booking: { select: { number: true, customerName: true, tower: true, unitNumber: true } },

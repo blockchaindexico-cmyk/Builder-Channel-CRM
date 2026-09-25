@@ -674,7 +674,16 @@ export async function deleteProject(
 export async function listProjectOptions(
   ctx: ServiceContext,
   options: { includeIds?: readonly string[] } = {},
-): Promise<{ id: string; code: string; name: string; builderName: string; isActive: boolean }[]> {
+): Promise<
+  {
+    id: string;
+    code: string;
+    name: string;
+    builderId: string;
+    builderName: string;
+    isActive: boolean;
+  }[]
+> {
   if (!ctx.permissions.has(CATALOG_PERMISSIONS.projectsView)) return [];
   const projects = await ctx.db.project.findMany({
     where: {
@@ -689,6 +698,7 @@ export async function listProjectOptions(
       code: true,
       name: true,
       isActive: true,
+      builderId: true,
       builder: { select: { name: true } },
     },
   });
@@ -696,6 +706,7 @@ export async function listProjectOptions(
     id: project.id,
     code: project.code,
     name: project.name,
+    builderId: project.builderId,
     builderName: project.builder.name,
     isActive: project.isActive,
   }));

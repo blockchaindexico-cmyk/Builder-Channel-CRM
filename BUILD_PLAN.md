@@ -876,26 +876,26 @@ payout, executive incentive, other expenses, net revenue, net profit, status DRA
 
 **Checklist**
 - [x] **M09-01** Models & migrations (decimal money everywhere).
-- [ ] **M09-02** Billing settings: legal name, tax registration id, address, invoice prefix & fiscal-year numbering, tax rates, bank details, terms/footer.
+- [x] **M09-02** Billing settings: legal name, tax registration id, address, invoice prefix & fiscal-year numbering, tax rates, bank details, terms/footer.
 - [x] **M09-03** Finance permissions (`finance.view|manage`, `billing.view|manage`, `commission.manage`) + optional "Accounts" role; financial fields hidden everywhere without permission.
 
 *Commission & deal P&L*
 - [x] **M09-04** Commission rate cards per builder/project (percentage, flat, slabs by value/volume) with validity periods.
 - [x] **M09-05** Auto-create deal financials on `booking.closed` using the applicable rate (snapshot); recompute on value change until locked.
-- [ ] **M09-06** Deal financial editor: gross commission, tax, TDS, cashback, payouts, incentive, other expenses → net revenue & net profit; confirm & lock; change history.
+- [x] **M09-06** Deal financial editor: gross commission, tax, TDS, cashback, payouts, incentive, other expenses → net revenue & net profit; confirm & lock; change history.
 
 *Billing*
-- [ ] **M09-07** Invoices from closed bookings (builder-wise): line items, tax calculation, statuses (Draft → Issued → Partially Paid → Paid / Cancelled), numbering.
+- [x] **M09-07** Invoices from closed bookings (builder-wise): line items, tax calculation, statuses (Draft → Issued → Partially Paid → Paid / Cancelled), numbering.
 - [ ] **M09-08** Invoice PDF (React-PDF) stored in file storage; download; optional email to the builder contact.
-- [ ] **M09-09** Payments/collections: full/partial, date, mode, reference, TDS deducted; automatic status and outstanding balance.
-- [ ] **M09-10** Receivables ageing (0–30 / 31–60 / 61–90 / 90+) + overdue-invoice job → notification to finance/admin.
-- [ ] **M09-11** Billing dashboard: billed, collected, outstanding, overdue — by builder, project, month.
+- [x] **M09-09** Payments/collections: full/partial, date, mode, reference, TDS deducted; automatic status and outstanding balance.
+- [x] **M09-10** Receivables ageing (0–30 / 31–60 / 61–90 / 90+) + overdue-invoice job → notification to finance/admin.
+- [x] **M09-11** Billing dashboard: billed, collected, outstanding, overdue — by builder, project, month.
 
 *Reports*
-- [ ] **M09-12** Profit & Loss report by builder, project, executive, manager and date range, with drill-down to deals.
-- [ ] **M09-13** Lost-opportunity report: count & estimated value of lost/not-interested leads and cancelled bookings by reason, builder, project, executive.
-- [ ] **M09-14** Billing reports: invoice register, collections register, outstanding; CSV/XLSX export.
-- [ ] **M09-15** Business expense ledger (*should-have*): marketing spend by source/campaign/project and overheads, feeding organization-level P&L and cost per lead.
+- [x] **M09-12** Profit & Loss report by builder, project, executive, manager and date range, with drill-down to deals.
+- [x] **M09-13** Lost-opportunity report: count & estimated value of lost/not-interested leads and cancelled bookings by reason, builder, project, executive.
+- [x] **M09-14** Billing reports: invoice register, collections register, outstanding; CSV/XLSX export.
+- [x] **M09-15** Business expense ledger (*should-have*): marketing spend by source/campaign/project and overheads, feeding organization-level P&L and cost per lead.
 - [x] **M09-16** Tests: commission calculation (%, flat, slabs, validity), tax split, rounding, fiscal-year numbering, payment transitions, financial permission isolation.
 
 **Acceptance criteria**

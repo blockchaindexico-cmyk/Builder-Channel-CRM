@@ -203,9 +203,11 @@ describe("billing, commission & profit/loss (M09)", () => {
       "billing.view",
       "bookings.view",
       "bookings.view_value",
+      "builders.view",
       "commission.manage",
       "finance.manage",
       "finance.view",
+      "projects.view",
     ]);
     expect((await getBillingSettings(env.ctx.admin.db, env.ctx.admin)).accountsRoleOffered).toBe(
       true,

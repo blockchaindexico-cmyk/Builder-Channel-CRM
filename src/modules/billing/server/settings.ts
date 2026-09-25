@@ -53,6 +53,9 @@ export async function seedBillingMasters(db: TenantDbOrTx, organizationId: strin
       ...Object.values(BILLING_PERMISSIONS).map((permission) => ({ permission, scope: null })),
       { permission: "bookings.view", scope: "ALL" },
       { permission: "bookings.view_value", scope: null },
+      // Builders and projects, to bill them and filter reports.
+      { permission: "builders.view", scope: null },
+      { permission: "projects.view", scope: null },
     ],
   });
   await setModuleSettings(db, ctx, BILLING_SETTINGS_NAMESPACE, billingSettingsSchema, {

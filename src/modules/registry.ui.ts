@@ -4,6 +4,7 @@ import { buildUiRegistry, type UiModule } from "@/platform/registry/ui";
 
 import { activitiesUiModule } from "./activities/ui";
 import { assignmentUiModule } from "./assignment/ui";
+import { billingUiModule } from "./billing/ui";
 import { dealsUiModule } from "./deals/ui";
 import { notificationsUiModule } from "./notifications/ui";
 
@@ -16,6 +17,7 @@ export const uiModules: readonly UiModule[] = [
   notificationsUiModule,
   activitiesUiModule,
   dealsUiModule,
+  billingUiModule,
 ];
 
 export const uiRegistry = buildUiRegistry(uiModules);
