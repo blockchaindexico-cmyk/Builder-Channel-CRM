@@ -43,6 +43,8 @@ test.describe("smoke", () => {
   });
 
   test("loads pages without console errors", async ({ page }) => {
+    // ~60 pages; in development each compiles on its first visit.
+    test.setTimeout(300_000);
     const problems: string[] = [];
     page.on("console", (message) => {
       if (message.type() === "error") problems.push(message.text());
