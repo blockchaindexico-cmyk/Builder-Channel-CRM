@@ -51,8 +51,6 @@ export const billingSettingsSchema = z.object({
     .trim()
     .regex(/^[A-Za-z0-9-]{1,10}$/, "Use up to 10 letters, digits or dashes")
     .default("INV"),
-  /** Month the fiscal year starts (4 = April). */
-  fiscalYearStartMonth: z.number().int().min(1).max(12).default(4),
   numberPadding: z.number().int().min(3).max(8).default(4),
   /** Total tax on commission, e.g. 18 (GST). */
   taxRate: z

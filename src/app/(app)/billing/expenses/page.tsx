@@ -30,7 +30,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/billing
   requirePermission(ctx, BILLING_PERMISSIONS.financeView);
   const params = await loadParams(searchParams);
   const regional = await getRegionalSettings(ctx);
-  const { today, period } = await resolvePeriod(ctx, regional.timezone, params);
+  const { today, period } = resolvePeriod(regional, params);
   const category =
     EXPENSE_CATEGORIES.find((entry) => entry.value === params.category)?.value ?? null;
   const [expenses, costPerLead, sources, campaigns, projects] = await Promise.all([

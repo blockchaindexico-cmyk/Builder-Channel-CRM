@@ -33,7 +33,7 @@ export default async function InvoicesPage({ searchParams }: PageProps<"/billing
   requirePermission(ctx, BILLING_PERMISSIONS.billingView);
   const params = await loadParams(searchParams);
   const regional = await getRegionalSettings(ctx);
-  const { today } = await resolvePeriod(ctx, regional.timezone, {});
+  const { today } = resolvePeriod(regional, {});
   const query = toTableQuery(params, {
     sortable: INVOICE_SORTABLE_FIELDS,
     defaultSort: { field: "issueDate", direction: "desc" },

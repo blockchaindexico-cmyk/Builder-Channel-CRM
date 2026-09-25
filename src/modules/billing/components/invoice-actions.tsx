@@ -1,6 +1,6 @@
 "use client";
 
-import { Ban, IndianRupee, Send, Trash2, Undo2 } from "lucide-react";
+import { Ban, FileDown, IndianRupee, Mail, Send, Trash2, Undo2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { actionErrorMessage } from "@/lib/action-result";
 
 import {
@@ -33,6 +34,7 @@ import {
   deleteInvoiceDraftAction,
   issueInvoiceAction,
   recordPaymentAction,
+  sendInvoiceAction,
   voidPaymentAction,
 } from "../actions";
 import { PAYMENT_MODES } from "../constants";
@@ -299,5 +301,97 @@ export function VoidPaymentButton({ paymentId, label }: { paymentId: string; lab
         return true;
       }}
     />
+  );
+}
+
+export function DownloadPdfButton({ invoiceId }: { invoiceId: string }) {
+  return (
+    <Button variant="outline" asChild>
+      <a href={`/api/billing/invoices/${invoiceId}/pdf?download=1`} download>
+        <FileDown /> PDF
+      </a>
+    </Button>
+  );
+}
+
+/** E-mails the invoice PDF to the builder (M09-08). */
+export function SendInvoiceDialog({
+  invoiceId,
+  number,
+  defaultTo,
+  sentTo,
+}: {
+  invoiceId: string;
+  number: string;
+  defaultTo: string | null;
+  sentTo: string | null;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline">
+          <Mail /> {sentTo ? "Send again" : "E-mail"}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>E-mail invoice {number}</DialogTitle>
+          <DialogDescription>
+            The PDF is attached. Replies go to the e-mail in billing settings.
+          </DialogDescription>
+        </DialogHeader>
+        <form
+          id="send-form"
+          className="grid gap-4"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            const form = new FormData(event.currentTarget);
+            setBusy(true);
+            const result = await sendInvoiceAction({
+              invoiceId,
+              to: String(form.get("to")),
+              message: String(form.get("message") ?? ""),
+            });
+            setBusy(false);
+            const error = actionErrorMessage(result);
+            if (error) return void toast.error(error);
+            toast.success(`Invoice ${number} is on its way`);
+            setOpen(false);
+            router.refresh();
+          }}
+        >
+          <div className="grid gap-1.5">
+            <Label htmlFor="send-to">To</Label>
+            <Input
+              id="send-to"
+              name="to"
+              type="email"
+              required
+              defaultValue={sentTo ?? defaultTo ?? ""}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="send-message">Message</Label>
+            <Textarea
+              id="send-message"
+              name="message"
+              maxLength={1000}
+              placeholder={`Please find attached our invoice ${number}.`}
+            />
+          </div>
+        </form>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Back
+          </Button>
+          <Button type="submit" form="send-form" disabled={busy}>
+            {busy ? "Sending…" : "Send"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

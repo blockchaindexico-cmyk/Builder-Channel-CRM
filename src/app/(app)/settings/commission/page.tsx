@@ -17,7 +17,7 @@ export default async function CommissionSettingsPage() {
   requirePermission(ctx, BILLING_PERMISSIONS.commissionManage);
   const regional = await getRegionalSettings(ctx);
   const [{ today }, terms, builders, projects] = await Promise.all([
-    resolvePeriod(ctx, regional.timezone, {}),
+    resolvePeriod(regional, {}),
     listCommissionTerms(ctx),
     listBuilderOptions(ctx, { includeInactive: true }),
     listProjectOptions(ctx),

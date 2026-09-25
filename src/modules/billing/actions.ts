@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { getRegionalSettings } from "@/modules/organization";
 import { tenantAction } from "@/platform/actions/client";
 
 import { BILLING_PERMISSIONS } from "./permissions";
@@ -13,6 +14,7 @@ import type {
   InvoiceDraftInput,
   PaymentInput,
 } from "./schemas";
+import * as documents from "./server/documents";
 import * as expenses from "./server/expenses";
 import * as financials from "./server/financials";
 import * as invoices from "./server/invoices";
@@ -176,6 +178,22 @@ export const voidPaymentAction = tenantAction
     const result = await invoices.voidPayment(ctx.service, parsedInput);
     refreshBilling();
     return result;
+  });
+
+export const sendInvoiceAction = tenantAction
+  .metadata({ name: "billing.invoice.send", permission: BILLING_PERMISSIONS.billingManage })
+  .inputSchema(values)
+  .action(async ({ parsedInput, ctx }) => {
+    const regional = await getRegionalSettings(ctx.service);
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: regional.timezone }).format(
+      new Date(),
+    );
+    await documents.sendInvoice(
+      ctx.service,
+      parsedInput as { invoiceId: string; to: string; message?: string | null },
+      today,
+    );
+    refreshBilling();
   });
 
 // --- Business expenses ----------------------------------------------------------------------------------------------

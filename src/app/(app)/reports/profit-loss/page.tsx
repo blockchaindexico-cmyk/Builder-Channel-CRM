@@ -45,7 +45,7 @@ export default async function ProfitLossPage({ searchParams }: PageProps<"/repor
   requirePermission(ctx, BILLING_PERMISSIONS.financeView);
   const params = await loadParams(searchParams);
   const regional = await getRegionalSettings(ctx);
-  const { period } = await resolvePeriod(ctx, regional.timezone, params);
+  const { period } = resolvePeriod(regional, params);
   const dimension = PL_DIMENSIONS.find((entry) => entry.value === params.by)?.value ?? "builder";
   const [pl, builders] = await Promise.all([
     getProfitAndLoss(ctx, period, dimension, { builderId: params.builder }),

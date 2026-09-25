@@ -28,7 +28,7 @@ export default async function BillingPage({ searchParams }: PageProps<"/billing"
   if (!ctx.permissions.has(BILLING_PERMISSIONS.billingView)) redirect("/billing/deals");
   const params = await loadParams(searchParams);
   const regional = await getRegionalSettings(ctx);
-  const { today, period, fiscalYear } = await resolvePeriod(ctx, regional.timezone, params);
+  const { today, period, fiscalYear } = resolvePeriod(regional, params);
   const canFinance = ctx.permissions.has(BILLING_PERMISSIONS.financeManage);
   const [dashboard, missing] = await Promise.all([
     getBillingDashboard(ctx, period, today),

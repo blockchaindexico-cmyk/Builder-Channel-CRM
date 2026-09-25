@@ -382,7 +382,8 @@ export async function issueInvoice(
       settings,
       invoice.intraState,
     );
-    const fiscal = fiscalYearOf(values.issueDate, settings.fiscalYearStartMonth);
+    const { fiscalYearStartMonth } = await getRegionalSettings(ctx);
+    const fiscal = fiscalYearOf(values.issueDate, fiscalYearStartMonth);
     const number = await nextSequenceNumber(
       tx,
       ctx,

@@ -3,6 +3,13 @@ import nodemailer, { type Transporter } from "nodemailer";
 import { env } from "@/config/env";
 import { logger } from "@/platform/logger";
 
+export interface EmailAttachment {
+  filename: string;
+  contentType: string;
+  /** File content, base64-encoded (messages travel through the job queue as JSON). */
+  contentBase64: string;
+}
+
 export interface EmailMessage {
   to: string | string[];
   subject: string;
@@ -12,6 +19,7 @@ export interface EmailMessage {
   replyTo?: string;
   cc?: string[];
   bcc?: string[];
+  attachments?: EmailAttachment[];
 }
 
 export interface EmailTransport {
@@ -42,6 +50,11 @@ class SmtpTransport implements EmailTransport {
       subject: message.subject,
       html: message.html,
       text: message.text,
+      attachments: message.attachments?.map((attachment) => ({
+        filename: attachment.filename,
+        contentType: attachment.contentType,
+        content: Buffer.from(attachment.contentBase64, "base64"),
+      })),
     });
     return { messageId: info.messageId ?? null };
   }
@@ -52,7 +65,12 @@ class ConsoleTransport implements EmailTransport {
 
   async send(message: EmailMessage) {
     logger.info(
-      { to: message.to, subject: message.subject, preview: message.text.slice(0, 500) },
+      {
+        to: message.to,
+        subject: message.subject,
+        preview: message.text.slice(0, 500),
+        attachments: message.attachments?.map((attachment) => attachment.filename),
+      },
       "e-mail (console transport — not delivered)",
     );
     return { messageId: null };

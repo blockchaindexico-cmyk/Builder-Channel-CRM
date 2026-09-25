@@ -4,9 +4,10 @@ import type { ReactElement } from "react";
 
 import { enqueueJob } from "@/platform/jobs/enqueue";
 
-import { type EmailMessage, getEmailTransport } from "./transport";
+import { type EmailAttachment, type EmailMessage, getEmailTransport } from "./transport";
 
 export {
+  type EmailAttachment,
   type EmailMessage,
   type EmailTransport,
   MemoryTransport,
@@ -25,6 +26,7 @@ export interface ComposeEmailInput {
   replyTo?: string;
   cc?: string[];
   bcc?: string[];
+  attachments?: EmailAttachment[];
 }
 
 export async function renderEmail(element: ReactElement): Promise<{ html: string; text: string }> {
@@ -42,6 +44,7 @@ async function compose(input: ComposeEmailInput): Promise<EmailMessage> {
     replyTo: input.replyTo,
     cc: input.cc,
     bcc: input.bcc,
+    attachments: input.attachments,
   };
 }
 

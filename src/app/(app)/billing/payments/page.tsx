@@ -26,7 +26,7 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/billing
   requirePermission(ctx, BILLING_PERMISSIONS.billingView);
   const params = await loadParams(searchParams);
   const regional = await getRegionalSettings(ctx);
-  const { period } = await resolvePeriod(ctx, regional.timezone, params);
+  const { period } = resolvePeriod(regional, params);
   const [register, builders] = await Promise.all([
     listPayments(ctx, { period, builderId: params.builder, includeVoided: true }),
     listBuilderOptions(ctx, { includeInactive: true }).catch(() => []),

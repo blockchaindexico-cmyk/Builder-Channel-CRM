@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { toTableQuery } from "@/lib/table-query";
 import { seedActivityMasters } from "@/modules/activities/server/masters";
 import { seedAssignmentMasters } from "@/modules/assignment/server/reasons";
+import { getInvoicePdf, sendInvoice } from "@/modules/billing/server/documents";
 import {
   deleteBusinessExpense,
   listBusinessExpenses,
@@ -60,6 +61,8 @@ import { ConflictError, ForbiddenError, ValidationError } from "@/platform/error
 import { eventHandlerQueueName } from "@/platform/events/define";
 import type { DomainEvent } from "@/platform/events/types";
 import { stopBoss } from "@/platform/jobs/boss";
+import { setStorageForTesting } from "@/platform/storage";
+import { MemoryStorageProvider } from "@/platform/storage/memory";
 import { createSystemContext } from "@/platform/tenant/context";
 
 import { contextFor, createMember, createOrganizationWithRoles } from "../support/identity";
@@ -160,10 +163,12 @@ describe("billing, commission & profit/loss (M09)", () => {
   let env: Awaited<ReturnType<typeof setup>>;
 
   beforeAll(async () => {
+    setStorageForTesting(new MemoryStorageProvider());
     env = await setup();
   });
 
   afterAll(async () => {
+    setStorageForTesting(undefined);
     await stopBoss();
   });
 
@@ -649,6 +654,39 @@ describe("billing, commission & profit/loss (M09)", () => {
       expect((await listBillableDeals(env.ctx.accounts, env.builder.id)).map((d) => d.id)).toEqual([
         dealIds[2],
       ]);
+    });
+
+    it("renders the PDF once for issued invoices and e-mails it with the PDF attached", async () => {
+      const first = await getInvoicePdf(env.ctx.accounts, invoiceId, "2026-10-21");
+      expect(first.fileName).toBe("INV-2026-27-0001.pdf");
+      expect(Buffer.from(first.body.slice(0, 5)).toString()).toBe("%PDF-");
+      const stored = await prisma.invoice.findUniqueOrThrow({ where: { id: invoiceId } });
+      expect(stored.pdfFileId).not.toBeNull();
+      const again = await getInvoicePdf(env.ctx.accounts, invoiceId, "2026-10-21");
+      expect(again.body.byteLength).toBe(first.body.byteLength);
+      expect(
+        await prisma.fileObject.count({
+          where: { organizationId: env.orgId, purpose: "billing.invoice" },
+        }),
+      ).toBe(1);
+
+      await expect(
+        sendInvoice(env.ctx.manager, { invoiceId, to: "accounts@skyline.test" }, "2026-10-21"),
+      ).rejects.toBeInstanceOf(ForbiddenError);
+      await sendInvoice(
+        env.ctx.accounts,
+        { invoiceId, to: "accounts@skyline.test", message: "Please process." },
+        "2026-10-21",
+      );
+      const sent = await prisma.invoice.findUniqueOrThrow({ where: { id: invoiceId } });
+      expect(sent.sentTo).toBe("accounts@skyline.test");
+      const [job] = await prisma.$queryRawUnsafe<
+        { data: { subject: string; attachments: { filename: string }[] } }[]
+      >(
+        `SELECT data FROM pgboss.job WHERE name = 'platform.email.send' AND data->>'to' = 'accounts@skyline.test' ORDER BY created_on DESC LIMIT 1`,
+      );
+      expect(job!.data.subject).toBe("Invoice INV/2026-27/0001 from Demo Realty LLP");
+      expect(job!.data.attachments.map((file) => file.filename)).toEqual(["INV-2026-27-0001.pdf"]);
     });
 
     it("lists and filters invoices, overdue ones included", async () => {

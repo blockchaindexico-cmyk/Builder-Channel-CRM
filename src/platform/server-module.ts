@@ -17,6 +17,9 @@ const emailMessageSchema = z.object({
   replyTo: z.string().optional(),
   cc: z.array(z.string()).optional(),
   bcc: z.array(z.string()).optional(),
+  attachments: z
+    .array(z.object({ filename: z.string(), contentType: z.string(), contentBase64: z.string() }))
+    .optional(),
 });
 
 /** Delivers queued e-mails (see `queueEmail`). Retries with backoff on SMTP failures. */

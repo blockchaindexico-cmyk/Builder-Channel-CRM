@@ -111,7 +111,7 @@ async function commissionFor(
   });
   let volumePosition: number | undefined;
   if (card?.type === "SLAB" && card.slabBasis === "VOLUME") {
-    const year = fiscalYearOf(recognizedOn, settings.fiscalYearStartMonth);
+    const year = fiscalYearOf(recognizedOn, regional.fiscalYearStartMonth);
     const earlier = await tx.dealFinancial.count({
       where: {
         builderId: booking.builderId,

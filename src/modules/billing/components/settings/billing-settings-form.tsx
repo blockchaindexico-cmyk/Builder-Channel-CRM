@@ -46,9 +46,12 @@ type TextField = {
 export function BillingSettingsForm({
   settings,
   today,
+  fiscalYearStartMonth,
 }: {
   settings: BillingSettings;
   today: string;
+  /** From the organization's regional settings. */
+  fiscalYearStartMonth: number;
 }) {
   const router = useRouter();
   const [values, setValues] = useState(settings);
@@ -69,7 +72,7 @@ export function BillingSettingsForm({
       {options.hint ? <p className="text-xs text-muted-foreground">{options.hint}</p> : null}
     </div>
   );
-  const year = fiscalYearOf(today, values.fiscalYearStartMonth);
+  const year = fiscalYearOf(today, fiscalYearStartMonth);
   const sample = `${values.invoicePrefix || "INV"}/${year.label}/${"1".padStart(values.numberPadding, "0")}`;
 
   async function save() {
@@ -123,7 +126,10 @@ export function BillingSettingsForm({
       <Card>
         <CardHeader>
           <CardTitle>Numbering and terms</CardTitle>
-          <CardDescription>Next invoice this year looks like {sample}.</CardDescription>
+          <CardDescription>
+            Next invoice this year looks like {sample}. Numbers restart every fiscal year (starting
+            in {MONTHS[fiscalYearStartMonth - 1]}, from the organization&apos;s regional settings).
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           {field("invoicePrefix", "Prefix", { max: 10 })}
@@ -139,27 +145,6 @@ export function BillingSettingsForm({
                 setValues({ ...values, numberPadding: Number(event.target.value) })
               }
             />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="billing-fy">Fiscal year starts in</Label>
-            <Select
-              value={String(values.fiscalYearStartMonth)}
-              onValueChange={(month) =>
-                setValues({ ...values, fiscalYearStartMonth: Number(month) })
-              }
-            >
-              <SelectTrigger id="billing-fy">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {MONTHS.map((month, index) => (
-                  <SelectItem key={month} value={String(index + 1)}>
-                    {month}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">Numbers restart every fiscal year.</p>
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="billing-terms-days">Payment due after (days)</Label>

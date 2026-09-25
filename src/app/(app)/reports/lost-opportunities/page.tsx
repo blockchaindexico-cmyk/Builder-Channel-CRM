@@ -24,7 +24,7 @@ export default async function LostOpportunitiesPage({
   requirePermission(ctx, BILLING_PERMISSIONS.financeView);
   const params = await loadParams(searchParams);
   const regional = await getRegionalSettings(ctx);
-  const { period } = await resolvePeriod(ctx, regional.timezone, params);
+  const { period } = resolvePeriod(regional, params);
   const report = await getLostOpportunities(ctx, period);
   const money = (value: string) => formatMoney(value, regional, { compact: true });
   const table = (title: string, first: string, rows: LostRow[], valueLabel = "Estimated value") => (

@@ -886,7 +886,7 @@ payout, executive incentive, other expenses, net revenue, net profit, status DRA
 
 *Billing*
 - [x] **M09-07** Invoices from closed bookings (builder-wise): line items, tax calculation, statuses (Draft → Issued → Partially Paid → Paid / Cancelled), numbering.
-- [ ] **M09-08** Invoice PDF (React-PDF) stored in file storage; download; optional email to the builder contact.
+- [x] **M09-08** Invoice PDF (React-PDF) stored in file storage; download; optional email to the builder contact.
 - [x] **M09-09** Payments/collections: full/partial, date, mode, reference, TDS deducted; automatic status and outstanding balance.
 - [x] **M09-10** Receivables ageing (0–30 / 31–60 / 61–90 / 90+) + overdue-invoice job → notification to finance/admin.
 - [x] **M09-11** Billing dashboard: billed, collected, outstanding, overdue — by builder, project, month.

@@ -109,6 +109,17 @@ test.describe("smoke", () => {
       "/settings/deals/reasons",
       "/settings/deals/stages",
       "/settings/deals/options",
+      // M09
+      "/billing",
+      "/billing/deals",
+      "/billing/invoices",
+      "/billing/invoices/new",
+      "/billing/payments",
+      "/billing/expenses",
+      "/reports/profit-loss?by=executive",
+      "/reports/lost-opportunities",
+      "/settings/billing",
+      "/settings/commission",
     ];
     for (const path of paths) {
       await page.goto(path);

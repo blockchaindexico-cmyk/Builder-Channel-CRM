@@ -17,8 +17,10 @@ import { InvoiceStatusBadge } from "@/modules/billing/components/badges";
 import {
   CancelInvoiceButton,
   DiscardDraftButton,
+  DownloadPdfButton,
   IssueInvoiceDialog,
   RecordPaymentDialog,
+  SendInvoiceDialog,
   VoidPaymentButton,
 } from "@/modules/billing/components/invoice-actions";
 import { InvoiceDocument } from "@/modules/billing/components/invoice-document";
@@ -43,7 +45,7 @@ export default async function InvoicePage({ params }: PageProps<"/billing/invoic
   requirePermission(ctx, BILLING_PERMISSIONS.billingView);
   const id = routeId((await params).id);
   const regional = await getRegionalSettings(ctx);
-  const { today } = await resolvePeriod(ctx, regional.timezone, {});
+  const { today } = resolvePeriod(regional, {});
   const [invoice, settings] = await Promise.all([
     loadOrNotFound(getInvoice(ctx, id, today)),
     getBillingSettings(ctx.db, ctx),
@@ -110,23 +112,35 @@ export default async function InvoicePage({ params }: PageProps<"/billing/invoic
         description={`${invoice.builder.name}${invoice.issuedByName ? ` · issued by ${invoice.issuedByName}` : ""}`}
         breadcrumbs={[{ label: "Invoices", href: "/billing/invoices" }, { label: title }]}
         actions={
-          canManage ? (
-            <div className="flex flex-wrap gap-2">
-              {invoice.status !== "CANCELLED" && invoice.number ? (
-                <CancelInvoiceButton invoiceId={invoice.id} number={invoice.number} />
-              ) : null}
-              {open ? (
-                <RecordPaymentDialog
+          <div className="flex flex-wrap gap-2">
+            <DownloadPdfButton invoiceId={invoice.id} />
+            {canManage && invoice.status !== "CANCELLED" && invoice.number ? (
+              <>
+                <SendInvoiceDialog
                   invoiceId={invoice.id}
-                  balance={invoice.balance}
-                  suggestedTds={toMoney(percentOf(invoice.subtotal, settings.tdsRate))}
-                  today={today}
+                  number={invoice.number}
+                  defaultTo={invoice.builderEmail}
+                  sentTo={invoice.sentTo}
                 />
-              ) : null}
-            </div>
-          ) : null
+                <CancelInvoiceButton invoiceId={invoice.id} number={invoice.number} />
+              </>
+            ) : null}
+            {canManage && open ? (
+              <RecordPaymentDialog
+                invoiceId={invoice.id}
+                balance={invoice.balance}
+                suggestedTds={toMoney(percentOf(invoice.subtotal, settings.tdsRate))}
+                today={today}
+              />
+            ) : null}
+          </div>
         }
       />
+      {invoice.sentAt ? (
+        <p className="mb-4 text-sm text-muted-foreground">
+          E-mailed to {invoice.sentTo} on {formatDateTime(invoice.sentAt, regional)}.
+        </p>
+      ) : null}
       {invoice.status === "CANCELLED" ? (
         <p className="mb-4 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm">
           Cancelled

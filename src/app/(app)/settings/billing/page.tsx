@@ -16,7 +16,7 @@ export default async function BillingSettingsPage() {
   requirePermission(ctx, BILLING_PERMISSIONS.billingManage);
   const regional = await getRegionalSettings(ctx);
   const [{ today }, settings] = await Promise.all([
-    resolvePeriod(ctx, regional.timezone, {}),
+    resolvePeriod(regional, {}),
     getBillingSettings(ctx.db, ctx),
   ]);
   return (
@@ -26,7 +26,11 @@ export default async function BillingSettingsPage() {
         description="Legal name, GSTIN, invoice numbering, tax and TDS rates, payment terms and bank details."
         breadcrumbs={[{ label: "Settings", href: "/settings" }, { label: "Billing & invoices" }]}
       />
-      <BillingSettingsForm settings={settings} today={today} />
+      <BillingSettingsForm
+        settings={settings}
+        today={today}
+        fiscalYearStartMonth={regional.fiscalYearStartMonth}
+      />
     </>
   );
 }
