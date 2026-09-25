@@ -2,6 +2,19 @@ import type { EventHandlerDefinition } from "@/platform/events/define";
 import type { DomainEventType } from "@/platform/events/types";
 import type { JobDefinition } from "@/platform/jobs/define";
 import type { FilePurpose } from "@/platform/storage/purposes";
+import type { ServiceContext } from "@/platform/tenant/context";
+
+/**
+ * Counts records of one module that point at a record of another module, e.g. the leads of a project.
+ * Owners ask before deleting (M03-11): `referenceChecksFor("Project")`. Declared by the referencing module.
+ */
+export interface ReferenceCheck {
+  /** Entity being referenced, e.g. "Project", "Builder", "PropertyType". */
+  entity: string;
+  /** Plural label for messages, e.g. "leads". */
+  label: string;
+  count(ctx: ServiceContext, id: string): Promise<number>;
+}
 
 /**
  * Server-side contributions of a module: background jobs and domain-event handlers.
@@ -15,6 +28,7 @@ export interface ServerModule {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   eventHandlers?: readonly EventHandlerDefinition<any>[];
   filePurposes?: readonly FilePurpose[];
+  referenceChecks?: readonly ReferenceCheck[];
 }
 
 export interface ServerRegistry {
@@ -25,6 +39,7 @@ export interface ServerRegistry {
   handlersFor(type: DomainEventType): readonly EventHandlerDefinition[];
   job(name: string): JobDefinition<unknown> | undefined;
   filePurpose(key: string): FilePurpose | undefined;
+  referenceChecksFor(entity: string): readonly ReferenceCheck[];
 }
 
 export function buildServerRegistry(modules: readonly ServerModule[]): ServerRegistry {
@@ -56,6 +71,8 @@ export function buildServerRegistry(modules: readonly ServerModule[]): ServerReg
     purposesByKey.set(purpose.key, purpose);
   }
 
+  const referenceChecks = modules.flatMap((module) => module.referenceChecks ?? []);
+
   return {
     modules,
     jobs,
@@ -64,5 +81,6 @@ export function buildServerRegistry(modules: readonly ServerModule[]): ServerReg
     handlersFor: (type) => byEvent.get(type) ?? [],
     job: (name) => jobsByName.get(name),
     filePurpose: (key) => purposesByKey.get(key),
+    referenceChecksFor: (entity) => referenceChecks.filter((check) => check.entity === entity),
   };
 }

@@ -5,8 +5,8 @@ import type { ReactNode } from "react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-/** Profile sections as tabs; the open tab is kept in `?tab=` so it can be linked to. */
-export function ProfileTabs({
+/** Page sections as tabs; the open tab is kept in `?tab=` so it can be linked to and survives reloads. */
+export function UrlTabs({
   tabs,
 }: {
   tabs: { value: string; label: string; content: ReactNode }[];

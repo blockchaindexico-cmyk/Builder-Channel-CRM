@@ -574,20 +574,20 @@ documents/media — the reference data that leads attach to.
 - Builders/projects with linked leads cannot be deleted — only deactivated. Inactive projects are hidden from new-lead forms but remain in history and reports.
 
 **Checklist**
-- [ ] **M03-01** Models and migrations for builders, contacts, projects, configurations, amenities, files and masters; seed property & configuration types.
-- [ ] **M03-02** Builder service & actions: create, update, activate/deactivate; audited.
-- [ ] **M03-03** Builders list (search, status filter, project count) and builder form.
-- [ ] **M03-04** Builder detail: overview, contacts (CRUD, primary contact), projects tab, documents tab; placeholders for leads & performance (M04/M10).
-- [ ] **M03-05** Project service & actions: create, update, status change (upcoming, pre-launch, under construction, ready to move, completed); validations.
-- [ ] **M03-06** Projects list with filters (builder, city/locality, status, property type, configuration, price range) and sorting.
-- [ ] **M03-07** Project form (sectioned): basics, location, RERA/registration number, launch & possession, pricing, configurations (repeatable rows), amenities, description & highlights.
-- [ ] **M03-08** Project detail: overview, configurations & pricing table, amenities, media gallery, documents with secure upload/download.
-- [ ] **M03-09** Project quick-info drawer (reused on the lead page in M04 so executives can answer questions during calls).
-- [ ] **M03-10** Master data settings pages: property types, configuration types, amenities.
-- [ ] **M03-11** Deactivation & soft-delete rules (warn on active projects/leads).
-- [ ] **M03-12** Permissions (`builders.view|manage`, `projects.view|manage`, `projects.files.manage`) + nav and settings registration.
-- [ ] **M03-13** Domain events (`builder.created|updated`, `project.created|updated`) and audit entries.
-- [ ] **M03-14** Tests: CRUD, per-organization uniqueness, permission gating, file access authorization.
+- [x] **M03-01** Models and migrations for builders, contacts, projects, configurations, amenities, files and masters; seed property & configuration types.
+- [x] **M03-02** Builder service & actions: create, update, activate/deactivate; audited.
+- [x] **M03-03** Builders list (search, status filter, project count) and builder form.
+- [x] **M03-04** Builder detail: overview, contacts (CRUD, primary contact), projects tab, documents tab; placeholders for leads & performance (M04/M10).
+- [x] **M03-05** Project service & actions: create, update, status change (upcoming, pre-launch, under construction, ready to move, completed); validations.
+- [x] **M03-06** Projects list with filters (builder, city/locality, status, property type, configuration, price range) and sorting.
+- [x] **M03-07** Project form (sectioned): basics, location, RERA/registration number, launch & possession, pricing, configurations (repeatable rows), amenities, description & highlights.
+- [x] **M03-08** Project detail: overview, configurations & pricing table, amenities, media gallery, documents with secure upload/download.
+- [x] **M03-09** Project quick-info drawer (reused on the lead page in M04 so executives can answer questions during calls).
+- [x] **M03-10** Master data settings pages: property types, configuration types, amenities.
+- [x] **M03-11** Deactivation & soft-delete rules (warn on active projects/leads).
+- [x] **M03-12** Permissions (`builders.view|manage`, `projects.view|manage`, `projects.files.manage`) + nav and settings registration.
+- [x] **M03-13** Domain events (`builder.created|updated`, `project.created|updated`) and audit entries.
+- [x] **M03-14** Tests: CRUD, per-organization uniqueness, permission gating, file access authorization.
 
 **Acceptance criteria**
 - Admin can add a new builder and its projects without any code change (PRD §4).

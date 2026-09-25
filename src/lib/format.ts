@@ -1,5 +1,9 @@
 import { TZDate } from "@date-fns/tz";
-import { format as formatDateFns, formatDistanceToNowStrict } from "date-fns";
+import {
+  format as formatDateFns,
+  formatDistanceToNowStrict,
+  parse as parseDateFns,
+} from "date-fns";
 
 /**
  * Formatting helpers (M01-22). All take the organization's regional settings so every screen formats
@@ -41,7 +45,8 @@ export function formatMoney(
     currency: settings.currency,
     notation: options.compact ? "compact" : "standard",
     minimumFractionDigits: options.compact ? 0 : (options.decimals ?? 0),
-    maximumFractionDigits: options.compact ? 1 : (options.decimals ?? 2),
+    // Two decimals keep compact prices honest: ₹1.65Cr, not ₹1.7Cr.
+    maximumFractionDigits: options.compact ? 2 : (options.decimals ?? 2),
   }).format(amount);
 }
 
@@ -91,4 +96,29 @@ export function formatRelative(value: DateInput, now: Date = new Date()): string
   const suffix = date.getTime() > now.getTime();
   const distance = formatDistanceToNowStrict(date, { addSuffix: false });
   return suffix ? `in ${distance}` : `${distance} ago`;
+}
+
+/**
+ * Calendar dates without a time (launch, possession, birthdays) are exchanged as `yyyy-MM-dd` strings and
+ * formatted as-is — never shifted by a timezone.
+ */
+export function formatCalendarDate(
+  value: string | null | undefined,
+  settings: Pick<RegionalFormatSettings, "dateFormat">,
+): string {
+  if (!value) return "—";
+  const date = parseDateFns(value.slice(0, 10), "yyyy-MM-dd", new Date(2000, 0, 1));
+  return Number.isNaN(date.getTime()) ? "—" : formatDateFns(date, settings.dateFormat);
+}
+
+/** Month and year of a calendar date, e.g. "Dec 2027" (possession timelines). */
+export function formatMonthYear(value: string | null | undefined): string {
+  if (!value) return "—";
+  const date = parseDateFns(value.slice(0, 10), "yyyy-MM-dd", new Date(2000, 0, 1));
+  return Number.isNaN(date.getTime()) ? "—" : formatDateFns(date, "MMM yyyy");
+}
+
+/** `yyyy-MM-dd` for a date-only database value (stored at UTC midnight). */
+export function toCalendarDateString(value: Date | null | undefined): string | null {
+  return value ? value.toISOString().slice(0, 10) : null;
 }

@@ -48,7 +48,28 @@ test.describe("smoke", () => {
       if (message.type() === "error") problems.push(message.text());
     });
     page.on("pageerror", (error) => problems.push(error.message));
-    for (const path of ["/dashboard", "/settings", "/settings/organization", "/settings/system"]) {
+    const paths = [
+      "/dashboard",
+      "/settings",
+      "/settings/organization",
+      "/settings/system",
+      // M02
+      "/team",
+      "/team?view=list",
+      "/profile",
+      "/profile?tab=security",
+      "/settings/users",
+      "/settings/roles",
+      "/settings/audit-log",
+      // M03
+      "/projects",
+      "/builders",
+      "/projects/new",
+      "/settings/catalog/property-types",
+      "/settings/catalog/configuration-types",
+      "/settings/catalog/amenities",
+    ];
+    for (const path of paths) {
       await page.goto(path);
       await page.waitForLoadState("networkidle");
     }

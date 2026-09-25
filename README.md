@@ -62,7 +62,9 @@ The seed creates the first administrator from `SEED_ADMIN_NAME` / `SEED_ADMIN_EM
 | `manager@demo-realty.test` | Manager | Admin |
 | `esha@demo-realty.test`, `rahul@demo-realty.test` | Executive | Manager |
 
-With the local `.env` the password is `ChangeMe123!`. There is no public sign-up: administrators invite people from
+With the local `.env` the password is `ChangeMe123!`. The same flag also creates demo builders (Skyline Developers,
+Horizon Realty) and three projects, and the seed always fills the default catalogue masters (property types, unit
+configurations, amenities) for every organization. There is no public sign-up: administrators invite people from
 **Settings → Users**, and invitations and password resets arrive by e-mail (Mailpit locally).
 
 ## Scripts
@@ -134,7 +136,7 @@ scaling notes.
 |---|---|---|
 | M01 | Project Foundation & Platform Core | Done |
 | M02 | Identity, Access Control & Team Structure | Done |
-| M03 | Builder & Project Management | Planned |
+| M03 | Builder & Project Management | Done |
 | M04 | Lead Management Core | Planned |
 | M05 | Lead Assignment, Reassignment & Team Workload | Planned |
 | M06 | Notifications & Reminders Engine | Planned |

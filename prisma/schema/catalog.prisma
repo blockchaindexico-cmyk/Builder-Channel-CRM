@@ -1,0 +1,271 @@
+// M03 — Builder & project catalogue: masters, builders, contacts, projects, configurations, amenities, documents.
+
+enum PropertyCategory {
+  RESIDENTIAL
+  COMMERCIAL
+  LAND
+}
+
+/// Master: kind of property (Apartment, Villa, Plot, Office…). Configurable per organization.
+model PropertyType {
+  id             String           @id @default(uuid(7)) @db.Uuid
+  organizationId String           @map("organization_id") @db.Uuid
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  category       PropertyCategory @default(RESIDENTIAL)
+  sortOrder      Int              @default(0) @map("sort_order")
+  isActive       Boolean          @default(true) @map("is_active")
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  projects ProjectPropertyType[]
+
+  @@unique([organizationId, name])
+  @@unique([organizationId, id])
+  @@map("property_types")
+}
+
+/// Master: unit configuration (1 RK, 2 BHK, Plot, Shop…).
+model ConfigurationType {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  /// Bedrooms for residential configurations (2.5 for "2.5 BHK"); used for ordering and requirement matching.
+  bedrooms       Decimal?     @db.Decimal(3, 1)
+  sortOrder      Int          @default(0) @map("sort_order")
+  isActive       Boolean      @default(true) @map("is_active")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  configurations ProjectConfiguration[]
+
+  @@unique([organizationId, name])
+  @@unique([organizationId, id])
+  @@map("configuration_types")
+}
+
+/// Master: project amenity (Swimming pool, Clubhouse…).
+model Amenity {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  sortOrder      Int          @default(0) @map("sort_order")
+  isActive       Boolean      @default(true) @map("is_active")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  projects ProjectAmenity[]
+
+  @@unique([organizationId, name])
+  @@unique([organizationId, id])
+  @@map("amenities")
+}
+
+/// A developer the channel partner works with (PRD §4).
+model Builder {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// Unique per organization (rule T2); generated as BLD-0001 unless entered.
+  code           String
+  name           String
+  legalName      String?      @map("legal_name")
+  website        String?
+  email          String?
+  phone          String?
+  /// Tax registration number (GSTIN in India).
+  taxId          String?      @map("tax_id")
+  addressLine    String?      @map("address_line")
+  city           String?
+  state          String?
+  postalCode     String?      @map("postal_code")
+  description    String?
+  isActive       Boolean      @default(true) @map("is_active")
+  deactivatedAt  DateTime?    @map("deactivated_at") @db.Timestamptz(3)
+  createdById    String?      @map("created_by_id") @db.Uuid
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  contacts BuilderContact[]
+  projects Project[]
+  files    BuilderFile[]
+
+  @@unique([organizationId, code])
+  @@unique([organizationId, id])
+  @@index([organizationId, isActive, name])
+  @@map("builders")
+}
+
+model BuilderContact {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  builderId      String   @map("builder_id") @db.Uuid
+  builder        Builder  @relation(fields: [organizationId, builderId], references: [organizationId, id], onDelete: Cascade)
+  name           String
+  designation    String?
+  phone          String?
+  email          String?
+  /// At most one primary contact per builder (enforced by the service).
+  isPrimary      Boolean  @default(false) @map("is_primary")
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([organizationId, builderId])
+  @@map("builder_contacts")
+}
+
+enum ProjectStatus {
+  UPCOMING
+  PRE_LAUNCH
+  UNDER_CONSTRUCTION
+  READY_TO_MOVE
+  COMPLETED
+}
+
+/// A builder's project with location, pricing, possession and media (PRD §4).
+model Project {
+  id             String        @id @default(uuid(7)) @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
+  builderId      String        @map("builder_id") @db.Uuid
+  builder        Builder       @relation(fields: [organizationId, builderId], references: [organizationId, id], onDelete: Restrict)
+  /// Unique per organization (rule T2); generated as PRJ-0001 unless entered.
+  code           String
+  name           String
+  status         ProjectStatus @default(UPCOMING)
+  /// Inactive projects are hidden from new-lead forms but stay in history and reports.
+  isActive       Boolean       @default(true) @map("is_active")
+  deactivatedAt  DateTime?     @map("deactivated_at") @db.Timestamptz(3)
+  /// RERA (or other authority) registration number.
+  reraNumber     String?       @map("rera_number")
+  addressLine    String?       @map("address_line")
+  locality       String?
+  city           String?
+  state          String?
+  postalCode     String?       @map("postal_code")
+  mapUrl         String?       @map("map_url")
+  launchDate     DateTime?     @map("launch_date") @db.Date
+  possessionDate DateTime?     @map("possession_date") @db.Date
+  possessionNote String?       @map("possession_note")
+  /// Derived from the configurations' prices on every save (for filtering and sorting).
+  priceMin       Decimal?      @map("price_min") @db.Decimal(14, 2)
+  priceMax       Decimal?      @map("price_max") @db.Decimal(14, 2)
+  totalTowers    Int?          @map("total_towers")
+  totalUnits     Int?          @map("total_units")
+  /// Free text, e.g. "12 acres".
+  projectArea    String?       @map("project_area")
+  description    String?
+  highlights     String[]      @default([])
+  createdById    String?       @map("created_by_id") @db.Uuid
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  configurations ProjectConfiguration[]
+  amenities      ProjectAmenity[]
+  propertyTypes  ProjectPropertyType[]
+  files          ProjectFile[]
+
+  @@unique([organizationId, code])
+  @@unique([organizationId, id])
+  @@index([organizationId, builderId])
+  @@index([organizationId, isActive, status])
+  @@index([organizationId, city])
+  @@map("projects")
+}
+
+model ProjectPropertyType {
+  organizationId String       @map("organization_id") @db.Uuid
+  projectId      String       @map("project_id") @db.Uuid
+  project        Project      @relation(fields: [organizationId, projectId], references: [organizationId, id], onDelete: Cascade)
+  propertyTypeId String       @map("property_type_id") @db.Uuid
+  propertyType   PropertyType @relation(fields: [organizationId, propertyTypeId], references: [organizationId, id], onDelete: Restrict)
+
+  @@id([projectId, propertyTypeId])
+  @@index([organizationId, propertyTypeId])
+  @@map("project_property_types")
+}
+
+/// One unit type offered by a project, with its carpet-area and price range.
+model ProjectConfiguration {
+  id                  String            @id @default(uuid(7)) @db.Uuid
+  organizationId      String            @map("organization_id") @db.Uuid
+  projectId           String            @map("project_id") @db.Uuid
+  project             Project           @relation(fields: [organizationId, projectId], references: [organizationId, id], onDelete: Cascade)
+  configurationTypeId String            @map("configuration_type_id") @db.Uuid
+  configurationType   ConfigurationType @relation(fields: [organizationId, configurationTypeId], references: [organizationId, id], onDelete: Restrict)
+  /// Carpet area in square feet.
+  carpetAreaMin       Decimal?          @map("carpet_area_min") @db.Decimal(10, 2)
+  carpetAreaMax       Decimal?          @map("carpet_area_max") @db.Decimal(10, 2)
+  priceMin            Decimal?          @map("price_min") @db.Decimal(14, 2)
+  priceMax            Decimal?          @map("price_max") @db.Decimal(14, 2)
+  notes               String?
+  sortOrder           Int               @default(0) @map("sort_order")
+
+  @@index([organizationId, projectId])
+  @@index([organizationId, configurationTypeId])
+  @@map("project_configurations")
+}
+
+model ProjectAmenity {
+  organizationId String  @map("organization_id") @db.Uuid
+  projectId      String  @map("project_id") @db.Uuid
+  project        Project @relation(fields: [organizationId, projectId], references: [organizationId, id], onDelete: Cascade)
+  amenityId      String  @map("amenity_id") @db.Uuid
+  amenity        Amenity @relation(fields: [organizationId, amenityId], references: [organizationId, id], onDelete: Restrict)
+
+  @@id([projectId, amenityId])
+  @@index([organizationId, amenityId])
+  @@map("project_amenities")
+}
+
+enum DocumentCategory {
+  BROCHURE
+  FLOOR_PLAN
+  PRICE_SHEET
+  IMAGE
+  LEGAL
+  AGREEMENT
+  OTHER
+}
+
+/// A document or image attached to a project (PRD §27).
+model ProjectFile {
+  id             String           @id @default(uuid(7)) @db.Uuid
+  organizationId String           @map("organization_id") @db.Uuid
+  projectId      String           @map("project_id") @db.Uuid
+  project        Project          @relation(fields: [organizationId, projectId], references: [organizationId, id], onDelete: Cascade)
+  fileId         String           @map("file_id") @db.Uuid
+  file           FileObject       @relation(fields: [organizationId, fileId], references: [organizationId, id], onDelete: Restrict)
+  category       DocumentCategory
+  title          String
+  /// Internal documents are visible only to people who manage project files.
+  isInternal     Boolean          @default(false) @map("is_internal")
+  createdById    String?          @map("created_by_id") @db.Uuid
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@unique([organizationId, fileId])
+  @@index([organizationId, projectId, category])
+  @@map("project_files")
+}
+
+/// A document attached to a builder (agreements, rate cards, KYC…).
+model BuilderFile {
+  id             String           @id @default(uuid(7)) @db.Uuid
+  organizationId String           @map("organization_id") @db.Uuid
+  builderId      String           @map("builder_id") @db.Uuid
+  builder        Builder          @relation(fields: [organizationId, builderId], references: [organizationId, id], onDelete: Cascade)
+  fileId         String           @map("file_id") @db.Uuid
+  file           FileObject       @relation(fields: [organizationId, fileId], references: [organizationId, id], onDelete: Restrict)
+  category       DocumentCategory
+  title          String
+  /// Internal documents (e.g. commission agreements) are visible only to people who manage builders.
+  isInternal     Boolean          @default(true) @map("is_internal")
+  createdById    String?          @map("created_by_id") @db.Uuid
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@unique([organizationId, fileId])
+  @@index([organizationId, builderId])
+  @@map("builder_files")
+}

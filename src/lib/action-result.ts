@@ -22,7 +22,7 @@ function isClientActionError(value: unknown): value is ClientActionError {
  * for a toast (or null when the action succeeded).
  */
 export function applyActionErrors<T extends FieldValues>(
-  form: UseFormReturn<T>,
+  form: Pick<UseFormReturn<T>, "setError">,
   result: ActionResultLike | undefined,
 ): string | null {
   if (!result) return "No response from the server. Please try again.";

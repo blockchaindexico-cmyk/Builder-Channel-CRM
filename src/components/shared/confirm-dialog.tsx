@@ -26,6 +26,7 @@ export function ConfirmDialog({
   confirmLabel = "Confirm",
   destructive = false,
   onConfirm,
+  onOpen,
 }: {
   trigger: ReactNode;
   title: string;
@@ -33,12 +34,21 @@ export function ConfirmDialog({
   confirmLabel?: string;
   destructive?: boolean;
   onConfirm: () => Promise<boolean | void> | boolean | void;
+  /** Called when the dialog opens, e.g. to load what the action will affect. */
+  onOpen?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   return (
-    <AlertDialog open={open} onOpenChange={(next) => !pending && setOpen(next)}>
+    <AlertDialog
+      open={open}
+      onOpenChange={(next) => {
+        if (pending) return;
+        setOpen(next);
+        if (next) onOpen?.();
+      }}
+    >
       <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>

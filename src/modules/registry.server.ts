@@ -5,6 +5,7 @@ import {
 } from "@/platform/registry/server";
 import { platformServerModule } from "@/platform/server-module";
 
+import { catalogServerModule } from "./catalog/server";
 import { identityServerModule } from "./identity/server";
 import { organizationServerModule } from "./organization/server";
 
@@ -16,6 +17,7 @@ export const serverModules: readonly ServerModule[] = [
   platformServerModule,
   organizationServerModule,
   identityServerModule,
+  catalogServerModule,
 ];
 
 let registry: ServerRegistry | undefined;

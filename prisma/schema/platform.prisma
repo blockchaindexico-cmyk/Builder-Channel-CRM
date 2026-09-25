@@ -15,14 +15,19 @@ model Organization {
   createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  settings        OrganizationSetting?
-  sequences       Sequence[]
-  auditLogs       AuditLog[]
-  outboxEvents    OutboxEvent[]
-  files           FileObject[]
-  roles           Role[]
-  rolePermissions RolePermission[]
-  memberships     Membership[]
+  settings           OrganizationSetting?
+  sequences          Sequence[]
+  auditLogs          AuditLog[]
+  outboxEvents       OutboxEvent[]
+  files              FileObject[]
+  roles              Role[]
+  rolePermissions    RolePermission[]
+  memberships        Membership[]
+  // M03
+  propertyTypes      PropertyType[]
+  configurationTypes ConfigurationType[]
+  amenities          Amenity[]
+  builders           Builder[]
 
   @@map("organizations")
 }
@@ -152,6 +157,9 @@ model FileObject {
   createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt      DateTime?    @map("deleted_at") @db.Timestamptz(3)
+
+  projectFiles ProjectFile[]
+  builderFiles BuilderFile[]
 
   @@unique([organizationId, id])
   @@index([organizationId, purpose, createdAt(sort: Desc)])

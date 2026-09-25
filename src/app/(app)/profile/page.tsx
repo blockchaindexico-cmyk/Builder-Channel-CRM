@@ -3,12 +3,12 @@ import type { Metadata } from "next";
 
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
+import { UrlTabs } from "@/components/shared/url-tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate } from "@/lib/format";
 import { AvatarUploader } from "@/modules/identity/components/profile/avatar-uploader";
 import { ChangePasswordForm } from "@/modules/identity/components/profile/change-password-form";
 import { ProfileForm } from "@/modules/identity/components/profile/profile-form";
-import { ProfileTabs } from "@/modules/identity/components/profile/profile-tabs";
 import { SessionsList } from "@/modules/identity/components/profile/sessions-list";
 import { getMyProfile } from "@/modules/identity/server/profile";
 import { listMySessions } from "@/modules/identity/server/sessions";
@@ -38,7 +38,7 @@ export default async function ProfilePage() {
   return (
     <>
       <PageHeader title="My profile" description="Your details, password and signed-in devices." />
-      <ProfileTabs
+      <UrlTabs
         tabs={[
           {
             value: "profile",

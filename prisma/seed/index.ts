@@ -3,16 +3,20 @@
  * syncs system-role permissions for new modules.
  *
  * 1. Default organization + settings.
- * 2. System roles (admin, manager, executive) with default permissions, for every organization.
+ * 2. System roles (admin, manager, executive) with default permissions, and the default catalogue masters
+ *    (property types, configurations, amenities) for every organization.
  * 3. First administrator from SEED_ADMIN_* (M02-19).
- * 4. Demo manager and executives when SEED_DEMO_USERS=true (never in production).
+ * 4. Demo manager, executives, builders and projects when SEED_DEMO_USERS=true (never in production).
  */
 import { env } from "@/config/env";
+import { seedCatalogMasters } from "@/modules/catalog/server/masters";
 import { syncSystemRoles } from "@/modules/identity/server/roles";
 import { auth } from "@/platform/auth/auth";
 import { prisma } from "@/platform/db/client";
 import { createTenantDb } from "@/platform/db/tenant-scope";
 import { getStorage } from "@/platform/storage";
+
+import { seedDemoCatalog } from "./demo-catalog";
 
 async function seedOrganization() {
   const slug = process.env.SEED_ORGANIZATION_SLUG ?? env.DEFAULT_ORGANIZATION_SLUG;
@@ -35,9 +39,13 @@ async function seedOrganization() {
 async function syncRolesForAllOrganizations() {
   const organizations = await prisma.organization.findMany({ select: { id: true, slug: true } });
   for (const organization of organizations) {
-    await syncSystemRoles(createTenantDb(organization.id), organization.id);
+    const db = createTenantDb(organization.id);
+    await syncSystemRoles(db, organization.id);
+    await seedCatalogMasters(db, organization.id);
   }
-  console.log(`✔ system roles synced for ${organizations.length} organization(s)`);
+  console.log(
+    `✔ system roles and catalogue masters synced for ${organizations.length} organization(s)`,
+  );
 }
 
 async function ensureUser(input: {
@@ -145,6 +153,7 @@ async function seedUsers(organizationId: string) {
     phone: "+919820000004",
   });
   console.log("✔ demo users: manager@, esha@, rahul@demo-realty.test (same password as the admin)");
+  if (await seedDemoCatalog(organizationId)) console.log("✔ demo builders and projects");
 }
 
 async function ensureStorage() {
