@@ -673,7 +673,7 @@ managers visibility into what is pending with each executive.
 ended at), `ReassignmentReason` (master), `AssignmentRule` (criteria, strategy, members, priority, active); `Lead.ownerAssignedAt`.
 
 **Key screens:** assign/reassign dialogs (lead detail & lead list bulk action), `/leads/unassigned`, `/team/workload`,
-`/settings/assignment-rules`, "Reassign & deactivate" wizard.
+`/settings/assignment/{rules,reasons,options}`, "Hand over leads & deactivate" wizard (Settings → Users → user).
 
 **Business rules**
 - Assignee must be an active member allowed to own leads; managers can assign only within their reporting tree.
@@ -683,19 +683,19 @@ ended at), `ReassignmentReason` (master), `AssignmentRule` (criteria, strategy, 
 - Concurrent reassignments are prevented with optimistic checks.
 
 **Checklist**
-- [ ] **M05-01** Models & migrations; backfill initial `LeadAssignment` rows for leads owned before M05.
-- [ ] **M05-02** Assignment service: assign unassigned lead (auto status → Assigned), scope & eligibility validation, optimistic concurrency.
-- [ ] **M05-03** Reassignment with mandatory reason (+ optional category): closes previous assignment, writes timeline + audit, emits event.
-- [ ] **M05-04** Assign/reassign dialogs on lead detail + assignment history panel.
-- [ ] **M05-05** Bulk assign/reassign from the lead list (one reason per batch, per-lead result summary).
-- [ ] **M05-06** "Assign to" on the create-lead form (Manager/Admin) + setting: auto-assign self-created leads to their creator.
-- [ ] **M05-07** Unassigned lead queue with ageing (time since creation).
-- [ ] **M05-08** Team workload board: per executive — active, new/untouched, unworked (> N hours, configurable), by status category; drill-down to filtered lead list.
-- [ ] **M05-09** "Reassign & deactivate" wizard hooked into M02 user deactivation (distribute leads to one or many executives).
-- [ ] **M05-10** Auto-assignment rules (*should-have*): match source/campaign/project → round-robin or least-loaded among selected executives; applied to API/import leads; settings UI.
-- [ ] **M05-11** Events `lead.assigned`, `lead.reassigned`, `lead.unassigned` (consumed by M06 notifications and M07/M08 task transfer).
-- [ ] **M05-12** Permissions: `leads.assign`, `leads.reassign` (TEAM/ALL), `team.workload.view`, `assignment_rules.manage`.
-- [ ] **M05-13** Tests: out-of-team assignment blocked, reason required, history integrity, concurrent reassignment, round-robin fairness.
+- [x] **M05-01** Models & migrations; backfill initial `LeadAssignment` rows for leads owned before M05.
+- [x] **M05-02** Assignment service: assign unassigned lead (auto status → Assigned), scope & eligibility validation, optimistic concurrency.
+- [x] **M05-03** Reassignment with mandatory reason (+ optional category): closes previous assignment, writes timeline + audit, emits event.
+- [x] **M05-04** Assign/reassign dialogs on lead detail + assignment history panel.
+- [x] **M05-05** Bulk assign/reassign from the lead list (one reason per batch, per-lead result summary).
+- [x] **M05-06** "Assign to" on the create-lead form (Manager/Admin) + setting: auto-assign self-created leads to their creator.
+- [x] **M05-07** Unassigned lead queue with ageing (time since creation).
+- [x] **M05-08** Team workload board: per executive — active, new/untouched, unworked (> N hours, configurable), by status category; drill-down to filtered lead list.
+- [x] **M05-09** "Reassign & deactivate" wizard hooked into M02 user deactivation (distribute leads to one or many executives).
+- [x] **M05-10** Auto-assignment rules (*should-have*): match source/campaign/project → round-robin or least-loaded among selected executives; applied to API/import leads; settings UI.
+- [x] **M05-11** Events `lead.assigned`, `lead.reassigned`, `lead.unassigned` (consumed by M06 notifications and M07/M08 task transfer).
+- [x] **M05-12** Permissions: `leads.assign`, `leads.reassign` (TEAM/ALL), `team.workload.view`, `assignment_rules.manage`.
+- [x] **M05-13** Tests: out-of-team assignment blocked, reason required, history integrity, concurrent reassignment, round-robin fairness.
 
 **Acceptance criteria**
 - Every lead shows its full assignment history with who/when/why.

@@ -163,6 +163,8 @@ model Lead {
   /// Membership owning the lead (null = unassigned). Assignment rules arrive with M05.
   ownerId                   String?          @map("owner_id") @db.Uuid
   owner                     Membership?      @relation("LeadOwner", fields: [organizationId, ownerId], references: [organizationId, id], onDelete: Restrict)
+  /// When the current owner got the lead (M05); "unworked" = no activity since then.
+  ownerAssignedAt           DateTime?        @map("owner_assigned_at") @db.Timestamptz(3)
   createdById               String?          @map("created_by_id") @db.Uuid
   createdBy                 Membership?      @relation("LeadCreator", fields: [organizationId, createdById], references: [organizationId, id], onDelete: Restrict)
   budgetMin                 Decimal?         @map("budget_min") @db.Decimal(14, 2)
@@ -195,6 +197,7 @@ model Lead {
   files         LeadFile[]
   activities    LeadActivity[]
   statusHistory LeadStatusHistory[]
+  assignments   LeadAssignment[]
 
   @@unique([organizationId, number])
   @@unique([organizationId, id])

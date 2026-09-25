@@ -164,6 +164,10 @@ model Membership {
   leadNotes    LeadNote[]  @relation("LeadNoteAuthor")
   savedViews   SavedView[] @relation("SavedViewOwner")
 
+  // M05
+  leadAssignments         LeadAssignment[] @relation("LeadAssignmentAssignee")
+  previousLeadAssignments LeadAssignment[] @relation("LeadAssignmentPrevious")
+
   @@unique([organizationId, userId])
   @@unique([organizationId, id])
   @@unique([organizationId, employeeCode])

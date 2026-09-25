@@ -95,7 +95,8 @@ src/modules/<module>/   business modules: index.ts (public API), client.ts, mani
                         actions, components, server/
 src/modules/registry.ts         composition root for module manifests (navigation, settings, permissions)
 src/modules/registry.server.ts  composition root for jobs, event handlers, file purposes and reference checks
-src/modules/registry.ui.ts      composition root for panels modules add to other modules' pages
+src/modules/registry.ui.ts      composition root for server-rendered panels/actions modules add to other modules' pages
+src/modules/registry.client.ts  composition root for client components modules add to other modules (bulk actions…)
 src/platform/           cross-cutting core: db (tenant scope), audit, events, jobs, storage, email, rbac, …
 src/components/ui/      UI primitives;  src/components/shared/  app shell, DataTable, PageHeader, …
 src/worker/             background worker entrypoint
@@ -152,7 +153,7 @@ curl -X POST http://localhost:3000/api/v1/leads \
 | M02 | Identity, Access Control & Team Structure | Done |
 | M03 | Builder & Project Management | Done |
 | M04 | Lead Management Core | Done |
-| M05 | Lead Assignment, Reassignment & Team Workload | Planned |
+| M05 | Lead Assignment, Reassignment & Team Workload | Done |
 | M06 | Notifications & Reminders Engine | Planned |
 | M07 | Calls, Follow-ups & Callbacks | Planned |
 | M08 | Site Visits, Revisits, Bookings & Closures | Planned |

@@ -100,11 +100,21 @@ function toDefaults(lead?: LeadDetail): FormInput {
         level: interest.level,
       })) ?? [],
     note: "",
+    assigneeId: "",
   } as FormInput;
 }
 
 /** Create / edit a lead (M04-05, M04-06) with a live duplicate check on the contact fields. */
-export function LeadForm({ lead, options }: { lead?: LeadDetail; options: LeadFormOptions }) {
+export function LeadForm({
+  lead,
+  options,
+  assignees = [],
+}: {
+  lead?: LeadDetail;
+  options: LeadFormOptions;
+  /** People the creator may assign the new lead to (M05); the field is hidden when empty. */
+  assignees?: { membershipId: string; name: string; openLeads: number; isMe: boolean }[];
+}) {
   const router = useRouter();
   const form = useForm<FormInput, unknown, CreateLeadValues>({
     resolver: zodResolver(createLeadSchema) as never,
@@ -295,6 +305,43 @@ export function LeadForm({ lead, options }: { lead?: LeadDetail; options: LeadFo
             </div>
           ) : null}
         </Section>
+
+        {!lead && assignees.length ? (
+          <Section
+            title="Owner"
+            description="Leave it unassigned to use the assignment rules, or the unassigned queue."
+          >
+            <FormField
+              control={form.control}
+              name="assigneeId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Assign to</FormLabel>
+                  <Select
+                    value={String(field.value || NONE)}
+                    onValueChange={(value) => field.onChange(value === NONE ? "" : value)}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value={NONE}>Leave unassigned</SelectItem>
+                      {assignees.map((member) => (
+                        <SelectItem key={member.membershipId} value={member.membershipId}>
+                          {member.name}
+                          {member.isMe ? " (you)" : ""} · {member.openLeads} open
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </Section>
+        ) : null}
 
         <Section title="Source">
           <FormField

@@ -3,7 +3,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { Contact, ListFilter, X } from "lucide-react";
 import Link from "next/link";
-import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
+import { parseAsBoolean, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { type ReactNode, useTransition } from "react";
 
 import { DataTable, DataTableColumnHeader, DataTableToolbar } from "@/components/shared/data-table";
@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatPhone } from "@/lib/phone";
+import { clientUiRegistry } from "@/modules/registry.client";
 
 import { STATUS_CATEGORIES, TEMPERATURES } from "../constants";
 import type { LeadRow } from "../server/leads";
@@ -56,6 +57,8 @@ const filterParsers = {
   temperature: parseAsString,
   tag: parseAsString,
   import: parseAsString,
+  unworked: parseAsInteger,
+  open: parseAsBoolean,
   createdFrom: parseAsString,
   createdTo: parseAsString,
   activityFrom: parseAsString,
@@ -115,6 +118,9 @@ export function LeadsTable({
   importBatch?: { id: string; fileName: string } | null;
 }) {
   const format = useFormatters();
+  const bulkActions = clientUiRegistry
+    .extensions("lead.list.bulk-action")
+    .toSorted((a, b) => a.order - b.order);
   const [, startTransition] = useTransition();
   const [filters, setFilters] = useQueryStates(filterParsers, { shallow: false, startTransition });
   type Patch = Exclude<Parameters<typeof setFilters>[0], ((...args: never[]) => unknown) | null>;
@@ -174,6 +180,13 @@ export function LeadsTable({
     });
   if (filters.tag) active.push({ key: "tag", label: `Tag: ${filters.tag}` });
   const moreCount = active.length + (filters.createdFrom ? 1 : 0) + (filters.activityFrom ? 1 : 0);
+  if (filters.open) active.push({ key: "open", label: "Open leads only" });
+  if (filters.unworked) {
+    active.push({
+      key: "unworked",
+      label: `No activity for ${filters.unworked} h since assignment`,
+    });
+  }
   if (filters.import) {
     active.push({ key: "import", label: `Import: ${importBatch?.fileName ?? "unknown file"}` });
   }
@@ -307,7 +320,7 @@ export function LeadsTable({
       getRowId={(row) => row.id}
       persistColumnsInUrl
       initiallyHiddenColumns={["location", "temperature"]}
-      enableRowSelection={canBulkStatus || canExport}
+      enableRowSelection={canBulkStatus || canExport || bulkActions.length > 0}
       bulkActions={(selected, clear) => (
         <>
           {canBulkStatus ? (
@@ -324,6 +337,9 @@ export function LeadsTable({
             />
           ) : null}
           {canExport ? <ExportSelectedButton ids={selected.map((row) => row.id)} /> : null}
+          {bulkActions.map(({ key, component: Action }) => (
+            <Action key={key} leadIds={selected.map((row) => row.id)} onDone={clear} />
+          ))}
           <Button size="sm" variant="ghost" onClick={clear}>
             Clear selection
           </Button>

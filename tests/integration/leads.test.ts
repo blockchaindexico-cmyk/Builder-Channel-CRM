@@ -169,10 +169,16 @@ describe("leads (M04)", () => {
       expect(lead.budgetMin?.toString()).toBe("8000000");
 
       const timeline = await listLeadTimeline(env.ctx.exec1, execLead.id);
-      expect(timeline.entries.map((entry) => entry.type).sort()).toEqual(["CREATED", "NOTE_ADDED"]);
+      // Executives own what they create (M05): the self-assignment moves the lead from New to Assigned.
+      expect(timeline.entries.map((entry) => entry.type).sort()).toEqual([
+        "ASSIGNED",
+        "CREATED",
+        "NOTE_ADDED",
+        "STATUS_CHANGED",
+      ]);
       expect(timeline.entries.every((entry) => entry.actorName === "Esha Exec")).toBe(true);
       const history = await prisma.leadStatusHistory.findMany({ where: { leadId: execLead.id } });
-      expect(history).toHaveLength(1);
+      expect(history).toHaveLength(2);
       const audit = await prisma.auditLog.findFirstOrThrow({
         where: { action: "lead.create", entityId: execLead.id },
       });

@@ -1,0 +1,109 @@
+// M05 — Lead assignment, reassignment & team workload (BUILD_PLAN M05).
+
+enum AssignmentKind {
+  /// First owner of an unassigned lead.
+  ASSIGN
+  /// Owner changed from one member to another (reason required).
+  REASSIGN
+  /// Lead put back into the unassigned queue.
+  UNASSIGN
+}
+
+enum AssignmentMethod {
+  MANUAL
+  BULK
+  /// Assigned to the executive who created it.
+  CREATOR
+  /// Owner column of an import.
+  IMPORT
+  /// Automatic assignment rule.
+  RULE
+  /// "Reassign & deactivate" wizard.
+  DEACTIVATION
+  /// Owners that existed before M05 (migration).
+  BACKFILL
+}
+
+enum AssignmentStrategy {
+  ROUND_ROBIN
+  LEAST_LOADED
+}
+
+/// Every ownership change of a lead, kept forever (PRD §7, §28). A row is the period of one owner: it starts at
+/// `assignedAt` and ends when the next change happens (`endedAt`). `assigneeId` is null after an unassignment.
+model LeadAssignment {
+  id              String              @id @default(uuid(7)) @db.Uuid
+  organizationId  String              @map("organization_id") @db.Uuid
+  organization    Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leadId          String              @map("lead_id") @db.Uuid
+  lead            Lead                @relation(fields: [organizationId, leadId], references: [organizationId, id], onDelete: Cascade)
+  kind            AssignmentKind
+  method          AssignmentMethod
+  assigneeId      String?             @map("assignee_id") @db.Uuid
+  assignee        Membership?         @relation("LeadAssignmentAssignee", fields: [organizationId, assigneeId], references: [organizationId, id], onDelete: Restrict)
+  previousOwnerId String?             @map("previous_owner_id") @db.Uuid
+  previousOwner   Membership?         @relation("LeadAssignmentPrevious", fields: [organizationId, previousOwnerId], references: [organizationId, id], onDelete: Restrict)
+  /// Member who made the change (null for rules, the intake API and the migration).
+  assignedById    String?             @map("assigned_by_id") @db.Uuid
+  assignedByName  String              @map("assigned_by_name")
+  reason          String?
+  reasonId        String?             @map("reason_id") @db.Uuid
+  reasonCategory  ReassignmentReason? @relation(fields: [organizationId, reasonId], references: [organizationId, id], onDelete: Restrict)
+  ruleId          String?             @map("rule_id") @db.Uuid
+  rule            AssignmentRule?     @relation(fields: [organizationId, ruleId], references: [organizationId, id], onDelete: Restrict)
+  assignedAt      DateTime            @default(now()) @map("assigned_at") @db.Timestamptz(3)
+  endedAt         DateTime?           @map("ended_at") @db.Timestamptz(3)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, leadId, assignedAt(sort: Desc)])
+  @@index([organizationId, assigneeId, endedAt])
+  @@map("lead_assignments")
+}
+
+/// Reason categories offered when reassigning (master data, per organization).
+model ReassignmentReason {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  label          String
+  isActive       Boolean      @default(true) @map("is_active")
+  sortOrder      Int          @default(0) @map("sort_order")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  assignments LeadAssignment[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, label])
+  @@map("reassignment_reasons")
+}
+
+/// Automatic assignment of new unassigned leads (M05-10). Empty criteria lists match everything; the first active
+/// rule (lowest priority number) whose criteria match assigns the lead to one of its members.
+model AssignmentRule {
+  id                   String             @id @default(uuid(7)) @db.Uuid
+  organizationId       String             @map("organization_id") @db.Uuid
+  organization         Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name                 String
+  isActive             Boolean            @default(true) @map("is_active")
+  priority             Int                @default(100)
+  channels             LeadChannel[]      @default([])
+  sourceIds            String[]           @default([]) @map("source_ids") @db.Uuid
+  campaignIds          String[]           @default([]) @map("campaign_ids") @db.Uuid
+  projectIds           String[]           @default([]) @map("project_ids") @db.Uuid
+  strategy             AssignmentStrategy @default(ROUND_ROBIN)
+  /// Memberships leads are distributed to (validated by the service).
+  memberIds            String[]           @default([]) @map("member_ids") @db.Uuid
+  /// Round-robin pointer: the member who received the previous lead.
+  lastAssignedMemberId String?            @map("last_assigned_member_id") @db.Uuid
+  assignedCount        Int                @default(0) @map("assigned_count")
+  createdByName        String             @map("created_by_name")
+  createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  assignments LeadAssignment[]
+
+  @@unique([organizationId, id])
+  @@index([organizationId, isActive, priority])
+  @@map("assignment_rules")
+}

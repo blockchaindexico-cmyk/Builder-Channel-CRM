@@ -5,6 +5,7 @@ import type { TableQuery } from "@/lib/table-query";
 import { plural } from "@/lib/utils";
 import { listMemberOptions } from "@/modules/identity";
 import { getRegionalSettings } from "@/modules/organization";
+import { getServerRegistry } from "@/modules/registry.server";
 import { diffRecords, recordAudit } from "@/platform/audit";
 import type { TenantDbOrTx } from "@/platform/db/tenant-scope";
 import { ConflictError, ValidationError } from "@/platform/errors";
@@ -376,7 +377,16 @@ export async function createLead(
   const settings = await getLeadSettings(ctx.db, ctx);
   const policy = options.duplicatePolicyOverride ?? settings.duplicatePolicy;
   const channel = options.channel ?? "MANUAL";
-  const ownerId = options.ownerId !== undefined ? options.ownerId : await defaultOwner(ctx);
+  // Owner asked for by the creator: the import's owner column or "Assign to" on the form.
+  const requestedOwnerId =
+    options.ownerId !== undefined ? options.ownerId : values.assigneeId || undefined;
+  // With assignment hooks installed (M05) they decide the owner; otherwise the M04 default applies.
+  const hooks = getServerRegistry().extensions("lead.created");
+  const ownerId = hooks.length
+    ? null
+    : requestedOwnerId !== undefined
+      ? requestedOwnerId
+      : await defaultOwner(ctx);
 
   return ctx.db.$transaction(async (tx) => {
     const { sourceId } = await resolveReferences(tx, values);
@@ -505,13 +515,35 @@ export async function createLead(
       before: {},
       after: snapshot,
     });
+    const projectIds = values.interests.map((interest) => interest.projectId);
+    for (const hook of hooks) {
+      await hook({
+        tx,
+        ctx,
+        lead: {
+          id: lead.id,
+          number,
+          channel,
+          statusKey: status.key,
+          sourceId,
+          campaignId: values.campaignId ?? null,
+          projectIds,
+        },
+        requestedOwnerId,
+        importBatchId: options.importBatchId,
+      });
+    }
+    const finalOwner = hooks.length
+      ? ((await tx.lead.findFirst({ where: { id: lead.id }, select: { ownerId: true } }))
+          ?.ownerId ?? null)
+      : ownerId;
     await publishEvent(tx, ctx, "lead.created", {
       leadId: lead.id,
       number,
       channel,
-      ownerId,
+      ownerId: finalOwner,
       sourceId,
-      projectIds: values.interests.map((interest) => interest.projectId),
+      projectIds,
     });
     const created: CreatedLead = {
       id: lead.id,
@@ -787,6 +819,10 @@ export interface LeadFilters {
   tag?: string | null;
   /** Leads created by one import (M04-18). */
   importBatchId?: string | null;
+  /** Open leads without any activity for this many hours since they were assigned (M05 workload drill-down). */
+  unworkedHours?: number | null;
+  /** Only leads in an open category (open, in progress, booking). */
+  openOnly?: boolean;
   created?: DateRange | null;
   updated?: DateRange | null;
   lastActivity?: DateRange | null;
@@ -876,6 +912,15 @@ export async function buildLeadWhere(
   if (filters.tag) and.push({ tags: { has: filters.tag } });
   const importBatchId = uuidOrNull(filters.importBatchId);
   if (importBatchId) and.push({ importBatchId });
+  if (filters.openOnly) and.push({ status: { category: { in: ["OPEN", "ACTIVE", "BOOKING"] } } });
+  if (filters.unworkedHours && filters.unworkedHours > 0) {
+    and.push({
+      ownerId: { not: null },
+      status: { category: { in: ["OPEN", "ACTIVE", "BOOKING"] } },
+      ownerAssignedAt: { lt: new Date(Date.now() - filters.unworkedHours * 3600 * 1000) },
+      lastActivityAt: { lte: ctx.db.lead.fields.ownerAssignedAt },
+    });
+  }
   if (filters.created) and.push({ createdAt: toUtcBounds(filters.created, filters.timezone) });
   if (filters.updated) and.push({ updatedAt: toUtcBounds(filters.updated, filters.timezone) });
   if (filters.lastActivity)

@@ -94,7 +94,12 @@ function refineLead(
 
 /** Create lead (M04-05): contact, requirement, source, project interests and an optional first note. */
 export const createLeadSchema = z
-  .object({ ...leadFields, note: optionalText(5000) })
+  .object({
+    ...leadFields,
+    note: optionalText(5000),
+    /** "Assign to" (M05) — applied by the assignment module, which checks who may assign to whom. */
+    assigneeId: optionalUuid,
+  })
   .superRefine(refineLead);
 export type CreateLeadInput = z.input<typeof createLeadSchema>;
 export type CreateLeadValues = z.output<typeof createLeadSchema>;

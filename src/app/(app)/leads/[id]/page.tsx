@@ -62,6 +62,7 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
       listStatusHistory(ctx, lead.id),
       listLeadStatuses(ctx),
     ]);
+  const actions = uiRegistry.extensions("lead.detail.action").toSorted((a, b) => a.order - b.order);
   const panels = uiRegistry
     .extensions("lead.detail.panel")
     .filter((panel) => !panel.permission || ctx.permissions.has(panel.permission))
@@ -84,14 +85,31 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
         description={`${lead.number} · ${lead.owner ? `Owner: ${lead.owner.name}` : "Unassigned"}${lead.source ? ` · ${lead.source.name}` : ""}`}
         breadcrumbs={[{ label: "Leads", href: "/leads" }, { label: lead.number }]}
         actions={
-          <LeadHeaderActions
-            lead={lead}
-            statuses={statuses}
-            canUpdate={canUpdate}
-            canChangeStatus={canChangeStatus}
-            canDelete={ctx.permissions.has(LEAD_PERMISSIONS.delete)}
-            statusPermissions={statusPermissions(ctx)}
-          />
+          <>
+            {await Promise.all(
+              actions.map(async (action) => (
+                <span key={action.key} className="contents">
+                  {await action.render({
+                    lead: {
+                      id: lead.id,
+                      number: lead.number,
+                      ownerId: lead.owner?.membershipId ?? null,
+                      ownerName: lead.owner?.name ?? null,
+                      statusKey: lead.status.key,
+                    },
+                  })}
+                </span>
+              )),
+            )}
+            <LeadHeaderActions
+              lead={lead}
+              statuses={statuses}
+              canUpdate={canUpdate}
+              canChangeStatus={canChangeStatus}
+              canDelete={ctx.permissions.has(LEAD_PERMISSIONS.delete)}
+              statusPermissions={statusPermissions(ctx)}
+            />
+          </>
         }
       />
 

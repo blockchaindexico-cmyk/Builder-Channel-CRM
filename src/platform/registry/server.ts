@@ -17,6 +17,19 @@ export interface ReferenceCheck {
 }
 
 /**
+ * Server-side extension points owned by modules, e.g. the hooks the leads module runs inside the transaction that
+ * creates a lead (M05 assigns it there). Declared by the owning module through declaration merging:
+ *
+ * ```ts
+ * declare module "@/platform/registry/server" {
+ *   interface ServerExtensionMap { "lead.created": LeadCreatedHook }
+ * }
+ * ```
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface ServerExtensionMap {}
+
+/**
  * Server-side contributions of a module: background jobs and domain-event handlers.
  * Modules export one of these from `src/modules/<name>/server/index.ts`; the composition root
  * `src/modules/registry.server.ts` lists them.
@@ -29,6 +42,7 @@ export interface ServerModule {
   eventHandlers?: readonly EventHandlerDefinition<any>[];
   filePurposes?: readonly FilePurpose[];
   referenceChecks?: readonly ReferenceCheck[];
+  extensions?: { [Point in keyof ServerExtensionMap]?: readonly ServerExtensionMap[Point][] };
 }
 
 export interface ServerRegistry {
@@ -40,6 +54,9 @@ export interface ServerRegistry {
   job(name: string): JobDefinition<unknown> | undefined;
   filePurpose(key: string): FilePurpose | undefined;
   referenceChecksFor(entity: string): readonly ReferenceCheck[];
+  extensions<Point extends keyof ServerExtensionMap>(
+    point: Point,
+  ): readonly ServerExtensionMap[Point][];
 }
 
 export function buildServerRegistry(modules: readonly ServerModule[]): ServerRegistry {
@@ -82,5 +99,10 @@ export function buildServerRegistry(modules: readonly ServerModule[]): ServerReg
     job: (name) => jobsByName.get(name),
     filePurpose: (key) => purposesByKey.get(key),
     referenceChecksFor: (entity) => referenceChecks.filter((check) => check.entity === entity),
+    extensions: (point) =>
+      modules.flatMap(
+        (module) =>
+          (module.extensions?.[point] ?? []) as readonly ServerExtensionMap[typeof point][],
+      ),
   };
 }

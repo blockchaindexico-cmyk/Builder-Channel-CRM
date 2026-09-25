@@ -24,8 +24,11 @@ src/modules/<name>/
 1. Add Prisma models in `prisma/schema/<name>.prisma` following the tenancy rules T1–T10
    (`organizationId` on every tenant table, per-tenant uniques, composite FKs to tenant parents).
 2. Register the manifest in `src/modules/registry.ts` and the server module in `src/modules/registry.server.ts`.
-   Panels for another module's pages (e.g. a "Site visits" panel on the lead page) go into
-   `src/modules/registry.ui.ts` under that module's extension key — never edit the other module's page.
+   Panels and header actions for another module's pages (e.g. a "Site visits" panel on the lead page) go into
+   `src/modules/registry.ui.ts` (server-rendered, `ui.tsx`), client components for another module's client UI
+   (e.g. a bulk action) into `src/modules/registry.client.ts` (`client-ui.ts`), and hooks into another module's
+   services (e.g. `lead.created`) into the server module's `extensions` — never edit the other module's code.
+   Keep `manifest.ts` plain data: the worker and the seed load it.
    Records that point at another module's records declare a `referenceChecks` entry so that module can refuse
    deletions (e.g. leads referencing a project).
 3. Services: assert permissions, apply data scope, use `ctx.db` (never the raw client), and write audit

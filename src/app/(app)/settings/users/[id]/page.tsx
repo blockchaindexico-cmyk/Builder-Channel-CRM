@@ -21,6 +21,7 @@ import { listRecentActivityForUser } from "@/modules/identity/server/audit-log";
 import { getMember, listManagerOptions } from "@/modules/identity/server/members";
 import { listAssignableRoles } from "@/modules/identity/server/roles";
 import { getRegionalSettings } from "@/modules/organization";
+import { uiRegistry } from "@/modules/registry.ui";
 import { loadOrNotFound, routeId } from "@/platform/pages";
 import { requirePermission } from "@/platform/rbac/guard";
 import { getRequestContext } from "@/platform/tenant/request-context";
@@ -65,12 +66,28 @@ export default async function UserDetailPage({ params }: PageProps<"/settings/us
           { label: member.name },
         ]}
         actions={
-          <MemberActions
-            membershipId={member.membershipId}
-            name={member.name}
-            status={member.status}
-            isSelf={member.membershipId === ctx.actor.membershipId}
-          />
+          <>
+            {await Promise.all(
+              uiRegistry
+                .extensions("member.detail.action")
+                .toSorted((a, b) => a.order - b.order)
+                .map(async (action) => (
+                  <span key={action.key} className="contents">
+                    {await action.render({
+                      membershipId: member.membershipId,
+                      name: member.name,
+                      status: member.status,
+                    })}
+                  </span>
+                )),
+            )}
+            <MemberActions
+              membershipId={member.membershipId}
+              name={member.name}
+              status={member.status}
+              isSelf={member.membershipId === ctx.actor.membershipId}
+            />
+          </>
         }
       />
       <div className="grid gap-6 xl:grid-cols-3">

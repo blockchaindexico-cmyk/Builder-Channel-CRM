@@ -15,27 +15,31 @@ model Organization {
   createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  settings           OrganizationSetting?
-  sequences          Sequence[]
-  auditLogs          AuditLog[]
-  outboxEvents       OutboxEvent[]
-  files              FileObject[]
-  roles              Role[]
-  rolePermissions    RolePermission[]
-  memberships        Membership[]
+  settings            OrganizationSetting?
+  sequences           Sequence[]
+  auditLogs           AuditLog[]
+  outboxEvents        OutboxEvent[]
+  files               FileObject[]
+  roles               Role[]
+  rolePermissions     RolePermission[]
+  memberships         Membership[]
   // M03
-  propertyTypes      PropertyType[]
-  configurationTypes ConfigurationType[]
-  amenities          Amenity[]
-  builders           Builder[]
+  propertyTypes       PropertyType[]
+  configurationTypes  ConfigurationType[]
+  amenities           Amenity[]
+  builders            Builder[]
   // M04
-  leadSources        LeadSource[]
-  campaigns          Campaign[]
-  leadStatuses       LeadStatus[]
-  leads              Lead[]
-  savedViews         SavedView[]
-  leadImports        LeadImportBatch[]
-  apiKeys            ApiKey[]
+  leadSources         LeadSource[]
+  campaigns           Campaign[]
+  leadStatuses        LeadStatus[]
+  leads               Lead[]
+  savedViews          SavedView[]
+  leadImports         LeadImportBatch[]
+  apiKeys             ApiKey[]
+  // M05
+  leadAssignments     LeadAssignment[]
+  reassignmentReasons ReassignmentReason[]
+  assignmentRules     AssignmentRule[]
 
   @@map("organizations")
 }

@@ -80,6 +80,12 @@ test.describe("smoke", () => {
       "/leads/import",
       "/leads/import/new",
       "/settings/api-keys",
+      // M05
+      "/leads/unassigned",
+      "/team/workload",
+      "/settings/assignment/rules",
+      "/settings/assignment/reasons",
+      "/settings/assignment/options",
     ];
     for (const path of paths) {
       await page.goto(path);

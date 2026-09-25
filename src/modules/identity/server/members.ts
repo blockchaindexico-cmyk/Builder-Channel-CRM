@@ -548,6 +548,32 @@ export async function assertCanViewMember(
 }
 
 /**
+ * Members for other modules' checks and pickers (e.g. who may own leads): optionally only these ids, only active
+ * members, only roles that grant `withPermission`. Works inside the caller's transaction; no permission check.
+ */
+export async function findMembers(
+  db: TenantDbOrTx,
+  options: { ids?: readonly string[]; activeOnly?: boolean; withPermission?: string } = {},
+): Promise<{ membershipId: string; name: string; status: MembershipStatus }[]> {
+  const members = await db.membership.findMany({
+    where: {
+      ...(options.ids ? { id: { in: [...options.ids] } } : {}),
+      ...(options.activeOnly ? { status: "ACTIVE" as const } : {}),
+      ...(options.withPermission
+        ? { role: { permissions: { some: { permission: options.withPermission } } } }
+        : {}),
+    },
+    orderBy: { user: { name: "asc" } },
+    select: { id: true, status: true, user: { select: { name: true } } },
+  });
+  return members.map((member) => ({
+    membershipId: member.id,
+    name: member.user.name,
+    status: member.status,
+  }));
+}
+
+/**
  * Colleague names for pickers and filters in other modules (owner, manager…). Names are not sensitive inside
  * an organization, so no permission is required; callers pass the ids their own scope allows.
  */

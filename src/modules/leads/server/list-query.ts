@@ -1,4 +1,10 @@
-import { createLoader, parseAsString, parseAsStringLiteral } from "nuqs/server";
+import {
+  createLoader,
+  parseAsBoolean,
+  parseAsInteger,
+  parseAsString,
+  parseAsStringLiteral,
+} from "nuqs/server";
 
 import { tableSearchParams } from "@/components/shared/data-table/search-params";
 import { isIsoDate } from "@/lib/date-range";
@@ -33,6 +39,8 @@ export const loadLeadListParams = createLoader({
   temperature: parseAsString,
   tag: parseAsString,
   import: parseAsString,
+  unworked: parseAsInteger,
+  open: parseAsBoolean,
   createdFrom: parseAsString,
   createdTo: parseAsString,
   activityFrom: parseAsString,
@@ -83,6 +91,9 @@ export async function resolveLeadListRequest(
       temperature: params.temperature,
       tag: params.tag,
       importBatchId: params.import,
+      openOnly: params.open === true,
+      unworkedHours:
+        params.unworked && params.unworked > 0 ? Math.min(params.unworked, 24 * 90) : null,
       created: range(params.createdFrom, params.createdTo),
       lastActivity: range(params.activityFrom, params.activityTo),
       timezone: regional.timezone,
