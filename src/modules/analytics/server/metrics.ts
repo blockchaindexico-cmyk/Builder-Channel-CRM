@@ -183,6 +183,7 @@ export async function getMetricSeries(
 export interface MemberMetrics {
   memberId: string;
   name: string;
+  managerId: string | null;
   managerName: string | null;
   isActive: boolean;
   values: MetricValues;
@@ -205,6 +206,7 @@ export async function getMemberMetrics(
         id: true,
         status: true,
         user: { select: { name: true } },
+        reportsToId: true,
         reportsTo: { select: { user: { select: { name: true } } } },
       },
     }),
@@ -220,6 +222,7 @@ export async function getMemberMetrics(
       return {
         memberId: member.id,
         name: member.user.name,
+        managerId: member.reportsToId,
         managerName: member.reportsTo?.user.name ?? null,
         isActive: member.status === "ACTIVE",
         values: { ...values, ...derived(values) },

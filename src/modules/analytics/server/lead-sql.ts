@@ -46,3 +46,10 @@ export function rangeSql(range: { from: string; to: string }, timezone: string) 
     end: Prisma.sql`((${range.to}::date + 1)::timestamp AT TIME ZONE ${timezone})`,
   };
 }
+
+/** Rows whose member column (assignee, caller, executive) lies in the scope. */
+export function memberSql(scope: ReportScope, column: Prisma.Sql): Prisma.Sql {
+  return scope.memberIds
+    ? Prisma.sql`${column} = ANY(${scope.memberIds}::uuid[])`
+    : Prisma.sql`TRUE`;
+}

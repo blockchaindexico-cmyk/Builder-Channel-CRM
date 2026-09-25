@@ -63,6 +63,8 @@ export interface DashboardData {
     builders: { value: string; label: string }[];
     projects: { value: string; label: string }[];
     sources: { value: string; label: string }[];
+    managers: { value: string; label: string }[];
+    statuses: { value: string; label: string }[];
   };
 }
 
@@ -135,14 +137,28 @@ export async function loadDashboard(
   };
 }
 
-async function loadOptions(ctx: ServiceContext, view: DashboardData["view"], scope: ReportScope) {
-  const [members, builders, projects, sources] = await Promise.all([
+export async function loadOptions(
+  ctx: ServiceContext,
+  view: DashboardData["view"],
+  scope: ReportScope,
+) {
+  const [members, managers, builders, projects, sources, statuses] = await Promise.all([
     view === "OWN"
       ? Promise.resolve([])
       : listMemberOptions(ctx, scope.memberIds ? { ids: scope.memberIds } : {}),
+    view === "OWN"
+      ? Promise.resolve([])
+      : listMemberOptions(ctx, {
+          managersOnly: true,
+          ...(scope.memberIds ? { ids: scope.memberIds } : {}),
+        }),
     listBuilderOptions(ctx, { includeInactive: true }).catch(() => []),
     listProjectOptions(ctx),
     ctx.db.leadSource.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    ctx.db.leadStatus.findMany({
+      orderBy: { sortOrder: "asc" },
+      select: { id: true, label: true },
+    }),
   ]);
   return {
     executives: members.map((member) => ({ value: member.membershipId, label: member.name })),
@@ -152,5 +168,7 @@ async function loadOptions(ctx: ServiceContext, view: DashboardData["view"], sco
       label: `${project.name} · ${project.builderName}`,
     })),
     sources: sources.map((source) => ({ value: source.id, label: source.name })),
+    managers: managers.map((member) => ({ value: member.membershipId, label: member.name })),
+    statuses: statuses.map((status) => ({ value: status.id, label: status.label })),
   };
 }

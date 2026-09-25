@@ -1,7 +1,7 @@
 import { CSV_TYPE, XLSX_TYPE } from "@/platform/export/spreadsheet";
 import type { ServerModule } from "@/platform/registry/server";
 
-import { REPORT_EXPORT_MAX_BYTES, REPORT_EXPORT_PURPOSE } from "./exports";
+import { REPORT_EXPORT_MAX_BYTES, REPORT_EXPORT_PURPOSE } from "../constants";
 import { analyticsEventHandlers } from "./handlers";
 import { analyticsJobs } from "./jobs";
 

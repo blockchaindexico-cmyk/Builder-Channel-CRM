@@ -5,7 +5,26 @@ import type { ReactNode } from "react";
  *
  * - `dashboard.widget`: cards other modules add to the dashboard (M09 finance), rendered on the server for the
  *   period and scope being viewed.
+ * - `report.catalog`: entries of the reports hub (plain manifest data), so modules list their own reports
+ *   (M09 profit & loss, lost opportunities).
  */
+export interface ReportCatalogEntry {
+  key: string;
+  title: string;
+  description: string;
+  group: "Performance" | "Leads" | "Activities" | "Deals" | "Finance";
+  href: string;
+  order: number;
+  /** Shown only with this permission (besides `reports.view` for the analytics module's own reports). */
+  permission?: string;
+}
+
+declare module "@/platform/registry/types" {
+  interface ContributionMap {
+    "report.catalog": ReportCatalogEntry;
+  }
+}
+
 export interface DashboardWidgetProps {
   range: { from: string; to: string };
   /** Whose figures the dashboard shows: the viewer, their team or the organization. */

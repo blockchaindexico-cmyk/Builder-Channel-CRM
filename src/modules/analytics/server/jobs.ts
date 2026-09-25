@@ -15,7 +15,6 @@ import {
   REFRESH_DEBOUNCE_SECONDS,
 } from "../constants";
 import { refreshDailyStats, snapshotLeads } from "./aggregates";
-import { runReportExport } from "./exports";
 
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
@@ -82,6 +81,8 @@ export const runExportJob = defineJob({
   schema: z.object({ organizationId: z.uuid(), exportId: z.uuid() }),
   queue: { retryLimit: 1, expireInSeconds: 1800 },
   async handler(data, job) {
+    // Loaded lazily: the export service enqueues jobs itself, which would make this module import itself.
+    const { runReportExport } = await import("./exports");
     await runReportExport(data.organizationId, data.exportId, job.logger);
   },
 });

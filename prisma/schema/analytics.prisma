@@ -82,3 +82,20 @@ model ReportExport {
   @@index([organizationId, requestedById, createdAt(sort: Desc)])
   @@map("report_exports")
 }
+
+/// A member's saved filters for a report (M10-08): the query string of the report page, under a name.
+model SavedReportView {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  membershipId   String       @map("membership_id") @db.Uuid
+  membership     Membership   @relation(fields: [organizationId, membershipId], references: [organizationId, id], onDelete: Cascade)
+  report         String
+  name           String
+  query          String
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@unique([organizationId, membershipId, report, name])
+  @@index([organizationId, membershipId, report])
+  @@map("saved_report_views")
+}

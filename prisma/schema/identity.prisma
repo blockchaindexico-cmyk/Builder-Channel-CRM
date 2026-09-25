@@ -183,10 +183,11 @@ model Membership {
   bookingsManaged  Booking[]   @relation("BookingManager")
 
   // M09
-  dealsCredited DealFinancial[]    @relation("DealFinancialExecutive")
-  dealsManaged  DealFinancial[]    @relation("DealFinancialManager")
-  dailyStats    DailyMemberStats[]
-  reportExports ReportExport[]
+  dealsCredited    DealFinancial[]    @relation("DealFinancialExecutive")
+  dealsManaged     DealFinancial[]    @relation("DealFinancialManager")
+  dailyStats       DailyMemberStats[]
+  reportExports    ReportExport[]
+  savedReportViews SavedReportView[]
 
   @@unique([organizationId, userId])
   @@unique([organizationId, id])

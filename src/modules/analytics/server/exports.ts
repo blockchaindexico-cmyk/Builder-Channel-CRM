@@ -1,4 +1,4 @@
-import "./reports";
+import "./report-definitions";
 
 import { TZDate } from "@date-fns/tz";
 import { format } from "date-fns";
@@ -18,7 +18,7 @@ import { storeServerFile } from "@/platform/storage/files";
 import type { ServiceContext } from "@/platform/tenant/context";
 import { createMemberContext } from "@/platform/tenant/member-context";
 
-import { ANALYTICS_JOBS } from "../constants";
+import { ANALYTICS_JOBS, REPORT_EXPORT_PURPOSE } from "../constants";
 import { ANALYTICS_PERMISSIONS } from "../permissions";
 import { getReportDefinition, type ReportDefinition, type TabularReport } from "./catalog";
 import type { ReportFilters } from "./metrics";
@@ -28,8 +28,6 @@ import type { ReportFilters } from "./metrics";
  * built on request; row-level reports go to the worker and the requester is notified with a download link. Every
  * export is audited and kept in `report_exports`.
  */
-export const REPORT_EXPORT_PURPOSE = "analytics.export";
-export const REPORT_EXPORT_MAX_BYTES = 50 * 1024 * 1024;
 
 export type ExportFormat = "csv" | "xlsx";
 

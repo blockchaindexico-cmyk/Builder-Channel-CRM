@@ -3,6 +3,12 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { seedActivityMasters } from "@/modules/activities/server/masters";
 import { readDailyStats, refreshDailyStats } from "@/modules/analytics/server/aggregates";
 import {
+  listMyExports,
+  readExportFile,
+  requestReportExport,
+  runReportExport,
+} from "@/modules/analytics/server/exports";
+import {
   getAgendaToday,
   getFunnel,
   getProjectPerformance,
@@ -17,6 +23,15 @@ import {
   getPipeline,
   resolveReportScope,
 } from "@/modules/analytics/server/metrics";
+import { resolveReportParams } from "@/modules/analytics/server/report-params";
+import { executivesReport } from "@/modules/analytics/server/reports/activity";
+import { bookingsReport, lostReport } from "@/modules/analytics/server/reports/deals";
+import { leadReportRows } from "@/modules/analytics/server/reports/leads";
+import {
+  cleanReportQuery,
+  listSavedReportViews,
+  saveReportView,
+} from "@/modules/analytics/server/saved-views";
 import { seedAssignmentMasters } from "@/modules/assignment/server/reasons";
 import { seedCatalogMasters } from "@/modules/catalog/server/masters";
 import { seedDealMasters } from "@/modules/deals/server/masters";
@@ -29,6 +44,8 @@ import { createTenantDb } from "@/platform/db/tenant-scope";
 import { ForbiddenError } from "@/platform/errors";
 import { stopBoss } from "@/platform/jobs/boss";
 import { PermissionSet } from "@/platform/rbac/permissions";
+import { setStorageForTesting } from "@/platform/storage";
+import { MemoryStorageProvider } from "@/platform/storage/memory";
 import { createServiceContext, createSystemContext } from "@/platform/tenant/context";
 
 import { contextFor, createMember, createOrganizationWithRoles } from "../support/identity";
@@ -233,10 +250,12 @@ describe("analytics metrics (M10)", () => {
   let env: Awaited<ReturnType<typeof setup>>;
 
   beforeAll(async () => {
+    setStorageForTesting(new MemoryStorageProvider());
     env = await setup();
   });
 
   afterAll(async () => {
+    setStorageForTesting(undefined);
     await stopBoss();
   });
 
@@ -488,6 +507,123 @@ describe("analytics metrics (M10)", () => {
     const agenda = await getAgendaToday(env.ctx.exec1, scope);
     // The missed follow-up of 11 September is still to do.
     expect(agenda).toMatchObject({ overdue: 1, followUpsDue: 0, visitsToday: 0 });
+  });
+
+  it("builds the reports: teams, bookings by dimension, lost leads and the lead database", async () => {
+    const params = { from: "2026-09-01", to: "2026-09-30" };
+    const report = await resolveReportParams(env.ctx.admin, { ...params, group: "team" });
+    const teams = await executivesReport(env.ctx.admin, report);
+    expect(teams.grouping).toBe("team");
+    expect(teams.rows.find((row) => row.label === "Meera Manager's team")).toMatchObject({
+      members: 2,
+      values: expect.objectContaining({ calls: 3, closures: 1 }),
+    });
+
+    const bookings = await bookingsReport(
+      env.ctx.admin,
+      await resolveReportParams(env.ctx.admin, { ...params, group: "project" }),
+    );
+    expect(bookings.rows.map((row) => [row.label, row.bookings, row.closures])).toEqual([
+      ["Alpha One · Alpha Builders", 1, 1],
+    ]);
+    expect(bookings.values).toBe(true);
+    const byManager = await bookingsReport(
+      env.ctx.admin,
+      await resolveReportParams(env.ctx.admin, { ...params, group: "manager" }),
+    );
+    expect(byManager.rows[0]).toMatchObject({ label: "Meera Manager", closures: 1 });
+    // Executives only see their own bookings, without values.
+    const own = await bookingsReport(
+      env.ctx.exec2,
+      await resolveReportParams(env.ctx.exec2, params),
+    );
+    expect(own.rows).toEqual([]);
+    expect(own.values).toBe(false);
+
+    const lost = await lostReport(env.ctx.admin, await resolveReportParams(env.ctx.admin, params));
+    expect(lost).toMatchObject({ lost: 1, notInterested: 0 });
+    expect(lost.byOwner[0]).toMatchObject({ label: "Ravi Exec", lost: 1 });
+    expect(lost.recent.map((lead) => lead.name)).toEqual(["Golden Two"]);
+
+    const leads = await leadReportRows(
+      env.ctx.manager,
+      await resolveReportParams(env.ctx.manager, params),
+      { skip: 0, take: 50 },
+    );
+    expect(leads.total).toBe(2);
+    expect(leads.rows.map((row) => row.name).sort()).toEqual(["Golden One", "Golden Two"]);
+    expect(leads.rows.find((row) => row.name === "Golden One")).toMatchObject({
+      projects: "Alpha One",
+      closedAt: "2026-09-15 10:30",
+    });
+  });
+
+  it("exports reports: small ones at once, large ones in the background, only with the permission", async () => {
+    const filters = {
+      range: { from: "2026-09-01", to: "2026-09-30" },
+      from: "2026-09-01",
+      to: "2026-09-30",
+    };
+    await expect(
+      requestReportExport(env.ctx.exec1, { report: "calls", format: "csv", filters }),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+    const file = await requestReportExport(env.ctx.manager, {
+      report: "calls",
+      format: "csv",
+      filters,
+    });
+    expect(file.kind).toBe("file");
+    if (file.kind === "file") {
+      expect(String(file.body)).toContain("Esha Exec");
+      expect(String(file.body)).not.toContain("Tara Exec");
+    }
+    const queued = await requestReportExport(env.ctx.admin, {
+      report: "leads",
+      format: "xlsx",
+      filters,
+    });
+    expect(queued.kind).toBe("queued");
+    if (queued.kind !== "queued") return;
+    await runReportExport(env.orgId, queued.exportId);
+    const exports = await listMyExports(env.ctx.admin);
+    expect(exports[0]).toMatchObject({
+      report: "leads",
+      status: "READY",
+      rowCount: 3,
+      downloadable: true,
+    });
+    const download = await readExportFile(env.ctx.admin, queued.exportId);
+    expect(download.fileName).toMatch(/^leads-.*\.xlsx$/);
+    await expect(readExportFile(env.ctx.manager, queued.exportId)).rejects.toThrow();
+    const notice = await prisma.notification.findFirst({
+      where: { organizationId: env.orgId, recipientId: env.m.admin, type: "report.export_ready" },
+    });
+    expect(notice?.title).toBe("Your Lead database export is ready");
+    expect(
+      await prisma.auditLog.count({
+        where: { organizationId: env.orgId, action: { startsWith: "analytics.export" } },
+      }),
+    ).toBe(2);
+  });
+
+  it("saves report views per member, keeping only report filters", async () => {
+    expect(cleanReportQuery("?from=2026-09-01&to=2026-09-30&evil=1&page=4&group=team")).toBe(
+      "from=2026-09-01&to=2026-09-30&group=team",
+    );
+    await saveReportView(env.ctx.manager, {
+      report: "executives",
+      name: "September teams",
+      query: "from=2026-09-01&group=team",
+    });
+    await saveReportView(env.ctx.manager, {
+      report: "executives",
+      name: "September teams",
+      query: "from=2026-09-02",
+    });
+    expect(await listSavedReportViews(env.ctx.manager, "executives")).toEqual([
+      expect.objectContaining({ name: "September teams", query: "from=2026-09-02" }),
+    ]);
+    expect(await listSavedReportViews(env.ctx.exec1, "executives")).toEqual([]);
   });
 
   it("resolves report scopes", async () => {

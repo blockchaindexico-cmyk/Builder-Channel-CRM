@@ -26,6 +26,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:reset": "prisma migrate reset --force",
     "db:seed": "prisma db seed",
+    "perf:load": "tsx --env-file-if-exists=.env scripts/perf/load-test.ts",
     "db:studio": "prisma studio",
     "services:up": "docker compose up -d",
     "services:down": "docker compose down",

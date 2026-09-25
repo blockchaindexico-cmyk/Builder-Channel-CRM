@@ -6,6 +6,7 @@ import {
   TrendingDown,
 } from "lucide-react";
 
+import type {} from "@/modules/analytics";
 import type { ModuleManifest } from "@/platform/registry/types";
 
 import { BILLING_PERMISSIONS } from "./permissions";
@@ -112,6 +113,36 @@ export const billingManifest: ModuleManifest = {
     },
   ],
   contributions: {
+    "report.catalog": [
+      {
+        key: "profit-loss",
+        title: "Profit & loss",
+        description:
+          "Commission, cashback, payouts and profit by builder, project, executive, manager or month.",
+        group: "Finance",
+        href: "/reports/profit-loss",
+        order: 10,
+        permission: BILLING_PERMISSIONS.financeView,
+      },
+      {
+        key: "lost-opportunities",
+        title: "Lost opportunities",
+        description: "Estimated value of lost leads and cancelled bookings, by reason.",
+        group: "Finance",
+        href: "/reports/lost-opportunities",
+        order: 20,
+        permission: BILLING_PERMISSIONS.financeView,
+      },
+      {
+        key: "collections",
+        title: "Billing & collections",
+        description: "Invoices billed, collected and outstanding, with receivables ageing.",
+        group: "Finance",
+        href: "/billing",
+        order: 30,
+        permission: BILLING_PERMISSIONS.billingView,
+      },
+    ],
     "notification.type": [
       {
         key: "billing.invoices_overdue",

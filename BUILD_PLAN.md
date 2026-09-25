@@ -935,19 +935,19 @@ organization dashboard — and deliver every report listed in the PRD with filte
 - [x] **M10-07** Profile activity/performance summary widget (PRD §21).
 
 *Reports (PRD §16)*
-- [ ] **M10-08** Report framework: shared filter bar, table + chart, saved filters, pagination, drill-down to leads.
-- [ ] **M10-09** Executive report and Manager/Team report.
-- [ ] **M10-10** Overall lead report (complete lead database with every filter).
-- [ ] **M10-11** Calling report (volume, connect rate, outcomes by executive/day).
-- [ ] **M10-12** Follow-up report (upcoming, completed, missed, overdue; adherence %).
-- [ ] **M10-13** Visit report (visits, revisits, outcomes, visit → booking and visit → closure conversion).
-- [ ] **M10-14** Booking report and Closed business report (by builder, project, manager, executive, date).
-- [ ] **M10-15** Lost lead report with loss reasons.
-- [ ] **M10-16** Funnel/conversion report (stage-to-stage conversion, average time in stage) + source/campaign performance report.
-- [ ] **M10-17** Profit report entry point (M09 P&L, permission-gated).
+- [x] **M10-08** Report framework: shared filter bar, table + chart, saved filters, pagination, drill-down to leads.
+- [x] **M10-09** Executive report and Manager/Team report.
+- [x] **M10-10** Overall lead report (complete lead database with every filter).
+- [x] **M10-11** Calling report (volume, connect rate, outcomes by executive/day).
+- [x] **M10-12** Follow-up report (upcoming, completed, missed, overdue; adherence %).
+- [x] **M10-13** Visit report (visits, revisits, outcomes, visit → booking and visit → closure conversion).
+- [x] **M10-14** Booking report and Closed business report (by builder, project, manager, executive, date).
+- [x] **M10-15** Lost lead report with loss reasons.
+- [x] **M10-16** Funnel/conversion report (stage-to-stage conversion, average time in stage) + source/campaign performance report.
+- [x] **M10-17** Profit report entry point (M09 P&L, permission-gated).
 
 *Export & performance*
-- [ ] **M10-18** CSV/XLSX export for every report; large exports run as background jobs with a notification + download link; exports audited.
+- [x] **M10-18** CSV/XLSX export for every report; large exports run as background jobs with a notification + download link; exports audited.
 - [ ] **M10-19** Performance hardening: query plans reviewed, seeded load test (e.g. 200k leads, 2M activities), p95 targets for dashboards < 1.5 s.
 - [ ] **M10-20** Tests: golden-dataset metric tests, scope isolation per role, timezone/date-boundary tests.
 
