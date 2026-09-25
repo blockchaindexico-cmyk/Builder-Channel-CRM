@@ -154,9 +154,9 @@ curl -X POST http://localhost:3000/api/v1/leads \
 | M03 | Builder & Project Management | Done |
 | M04 | Lead Management Core | Done |
 | M05 | Lead Assignment, Reassignment & Team Workload | Done |
-| M06 | Notifications & Reminders Engine | Planned |
-| M07 | Calls, Follow-ups & Callbacks | Planned |
-| M08 | Site Visits, Revisits, Bookings & Closures | Planned |
+| M06 | Notifications & Reminders Engine | Done |
+| M07 | Calls, Follow-ups & Callbacks | Done |
+| M08 | Site Visits, Revisits, Bookings & Closures | Done |
 | M09 | Billing, Commission & Profit/Loss | Planned |
 | M10 | Dashboards, Reports & Analytics | Planned |
 

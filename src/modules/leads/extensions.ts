@@ -2,7 +2,7 @@ import type { ComponentType, ReactNode } from "react";
 
 import type { Prisma } from "@/generated/prisma/client";
 import type { LeadChannel } from "@/generated/prisma/enums";
-import type { TenantTx } from "@/platform/db/tenant-scope";
+import type { TenantDbOrTx, TenantTx } from "@/platform/db/tenant-scope";
 import type { ServiceContext } from "@/platform/tenant/context";
 
 /**
@@ -18,6 +18,13 @@ import type { ServiceContext } from "@/platform/tenant/context";
  * - `lead.created` (server): hooks run inside the transaction that creates a lead (M05 assigns it there).
  * - `lead.list.filter` (server): extra filters of the lead list and its exports (M07 follow-up status, calls). Each
  *   reads its own URL parameter; its options appear under "More filters".
+ * - `lead.list.preset`: ready-made views of the lead list (a query string), offered with the saved views — client-safe,
+ *   contributed through module manifests (M08 lost and not-interested leads).
+ * - `lead.status.changing` (server): hooks run inside the transaction of every status change, before it is saved;
+ *   they may refuse it (throw) and add a line to its timeline entry (M08 requires a loss reason for Lost / Not
+ *   Interested).
+ * - `lead.status.fields`: extra fields of the status pickers (status dialog, M07's call dialog) for a chosen status;
+ *   their answers travel as the change's `details` (client components, via `src/modules/registry.client.ts`).
  */
 export interface LeadDetailPanel {
   key: string;
@@ -39,9 +46,13 @@ export interface LeadTimelineRenderer {
 export interface LeadActionTarget {
   id: string;
   number: string;
+  name: string;
   ownerId: string | null;
   ownerName: string | null;
   statusKey: string;
+  statusCategory: string;
+  /** Closed (won, lost, not interested, invalid): reopening needs `leads.reopen`. */
+  isTerminal: boolean;
 }
 
 export interface LeadDetailAction {
@@ -75,6 +86,67 @@ export interface LeadCreatedHookInput {
 }
 export type LeadCreatedHook = (input: LeadCreatedHookInput) => Promise<void>;
 
+/** A status as seen by status-change hooks and fields. */
+export interface LeadStatusInfo {
+  key: string;
+  label: string;
+  category: string;
+  isTerminal: boolean;
+}
+
+export interface LeadStatusChangingInput {
+  /** The transaction of the status change. */
+  tx: TenantDbOrTx;
+  ctx: ServiceContext;
+  lead: { id: string; number: string; ownerId: string | null };
+  from: LeadStatusInfo;
+  to: LeadStatusInfo;
+  reason: string | null;
+  /** Answers of the `lead.status.fields` of the change (validated by the hook that reads them). */
+  details: Record<string, string | number | boolean | null>;
+  /** Driven by a module's workflow (assignment, calls, visits, bookings) rather than chosen by a person. */
+  workflow: boolean;
+}
+
+export interface LeadStatusChangingResult {
+  /** Appended to the timeline and audit summary, e.g. "Loss reason: Budget". */
+  note?: string;
+  /** Merged into the timeline entry's payload. */
+  payload?: Record<string, unknown>;
+}
+
+export type LeadStatusChangingHook = (
+  input: LeadStatusChangingInput,
+) => Promise<LeadStatusChangingResult | void>;
+
+export interface LeadStatusFieldsProps {
+  /** The status being chosen. */
+  target: LeadStatusInfo;
+  /** The status the lead is in (absent for bulk changes). */
+  current?: LeadStatusInfo;
+  details: Record<string, string | number | boolean | null>;
+  onChange: (details: Record<string, string | number | boolean | null>) => void;
+  disabled?: boolean;
+}
+
+export interface LeadStatusFields {
+  key: string;
+  order: number;
+  /** Renders nothing when the target status needs no extra answer. */
+  component: ComponentType<LeadStatusFieldsProps>;
+}
+
+/** A ready-made lead list view, e.g. "Lost leads" = `closure=lost`. */
+export interface LeadListPreset {
+  key: string;
+  label: string;
+  /** Query string of the lead list (filters, sort, columns). */
+  query: string;
+  order: number;
+  /** Offered only with this permission. */
+  permission?: string;
+}
+
 declare module "@/platform/registry/ui" {
   interface UiExtensionMap {
     "lead.detail.panel": LeadDetailPanel;
@@ -85,12 +157,14 @@ declare module "@/platform/registry/ui" {
 declare module "@/platform/registry/types" {
   interface ContributionMap {
     "lead.timeline": LeadTimelineRenderer;
+    "lead.list.preset": LeadListPreset;
   }
 }
 
 declare module "@/platform/registry/client-ui" {
   interface ClientUiExtensionMap {
     "lead.list.bulk-action": LeadBulkAction;
+    "lead.status.fields": LeadStatusFields;
   }
 }
 
@@ -98,6 +172,7 @@ declare module "@/platform/registry/server" {
   interface ServerExtensionMap {
     "lead.created": LeadCreatedHook;
     "lead.list.filter": LeadListFilter;
+    "lead.status.changing": LeadStatusChangingHook;
   }
 }
 

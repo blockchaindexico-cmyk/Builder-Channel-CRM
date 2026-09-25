@@ -1,3 +1,4 @@
+import { appRegistry } from "@/modules/registry";
 import { recordAudit } from "@/platform/audit";
 import { ForbiddenError, NotFoundError } from "@/platform/errors";
 import type { ServiceContext } from "@/platform/tenant/context";
@@ -5,6 +6,7 @@ import { parseInput } from "@/platform/validation";
 
 import { LEAD_PERMISSIONS } from "../permissions";
 import { savedViewSchema } from "../schemas";
+import { leadListFilterExtensions } from "./list-filters";
 
 /** Allowed URL parameters of a saved lead view (anything else is dropped). */
 const VIEW_PARAMS = new Set([
@@ -32,11 +34,16 @@ const VIEW_PARAMS = new Set([
   "hide",
 ]);
 
+/** Keeps the list's own parameters and those of other modules' filters (`lead.list.filter`). */
 export function sanitizeViewQuery(query: string): string {
+  const allowed = new Set([
+    ...VIEW_PARAMS,
+    ...leadListFilterExtensions().map((filter) => filter.key),
+  ]);
   const params = new URLSearchParams(query.startsWith("?") ? query.slice(1) : query);
   const clean = new URLSearchParams();
   for (const [key, value] of params)
-    if (VIEW_PARAMS.has(key) && value.length <= 500) clean.append(key, value);
+    if (allowed.has(key) && value.length <= 500) clean.append(key, value);
   return clean.toString();
 }
 
@@ -117,4 +124,19 @@ export async function deleteView(ctx: ServiceContext, viewId: string) {
     throw new ForbiddenError("Only the owner can delete this view.");
   }
   await ctx.db.savedView.delete({ where: { id: viewId } });
+}
+
+export interface ListPresetRow {
+  key: string;
+  label: string;
+  query: string;
+}
+
+/** Ready-made views other modules offer (`lead.list.preset`), limited to the actor's permissions. */
+export function listLeadListPresets(ctx: ServiceContext): ListPresetRow[] {
+  return appRegistry
+    .contributions("lead.list.preset")
+    .filter((preset) => !preset.permission || ctx.permissions.has(preset.permission))
+    .toSorted((a, b) => a.order - b.order)
+    .map((preset) => ({ key: preset.key, label: preset.label, query: preset.query }));
 }

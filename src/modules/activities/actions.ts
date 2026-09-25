@@ -101,6 +101,7 @@ export const activityDialogOptionsAction = tenantAction
               key: status.key,
               label: status.label,
               color: status.color,
+              category: status.category,
               requiresReason: status.requiresReason,
               isTerminal: status.isTerminal,
             }))

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
 
+import { ChoiceChips } from "@/components/shared/choice-chips";
 import { useFormatters, useRegionalSettings } from "@/components/shared/regional-settings";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +21,6 @@ import { actionErrorMessage, type ClientActionError } from "@/lib/action-result"
 import { fromZonedInputValue } from "@/lib/date-range";
 
 import { activityDialogOptionsAction, scheduleFollowUpAction } from "../actions";
-import { ChoiceChips } from "./choice-chips";
 import { emptyFollowUp, type FollowUpDraft, FollowUpFields } from "./follow-up-fields";
 
 /** Schedule a follow-up or a customer-requested callback (M07-10). */

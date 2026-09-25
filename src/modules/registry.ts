@@ -5,6 +5,7 @@ import { activitiesManifest } from "./activities/manifest";
 import { assignmentManifest } from "./assignment/manifest";
 import { catalogManifest } from "./catalog/manifest";
 import { coreManifest } from "./core/manifest";
+import { dealsManifest } from "./deals/manifest";
 import { identityManifest } from "./identity/manifest";
 import { leadsManifest } from "./leads/manifest";
 import { notificationsManifest } from "./notifications/manifest";
@@ -23,6 +24,7 @@ export const moduleManifests: readonly ModuleManifest[] = [
   assignmentManifest,
   notificationsManifest,
   activitiesManifest,
+  dealsManifest,
 ];
 
 export const appRegistry = composeRegistry(moduleManifests);

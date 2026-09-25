@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { statusDetailsSchema } from "@/modules/leads";
+
 import { RECORDING_MAX_BYTES } from "./constants";
 
 const optionalText = (max: number) =>
@@ -45,6 +47,8 @@ export const logCallSchema = z.object({
   notes: optionalText(2000),
   statusKey: z.string().trim().min(1).max(40).nullable().optional(),
   statusReason: optionalText(500),
+  /** Answers of the status's extra fields (e.g. M08's loss reason). */
+  statusDetails: statusDetailsSchema,
   /** Open follow-up or callback this call took care of. */
   completeFollowUpId: optionalUuid,
   next: followUpInputSchema.nullable().optional(),

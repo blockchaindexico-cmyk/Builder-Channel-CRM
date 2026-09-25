@@ -1,3 +1,4 @@
+import { getServerRegistry } from "@/modules/registry.server";
 import { recordAudit } from "@/platform/audit";
 import type { TenantDbOrTx } from "@/platform/db/tenant-scope";
 import { ForbiddenError, NotFoundError, ValidationError } from "@/platform/errors";
@@ -6,15 +7,30 @@ import type { ServiceContext } from "@/platform/tenant/context";
 import { parseInput } from "@/platform/validation";
 
 import { LEAD_ACTIVITY_TYPES, SYSTEM_DRIVEN_STATUS_KEYS } from "../constants";
+import type { LeadStatusInfo } from "../extensions";
 import { LEAD_PERMISSIONS } from "../permissions";
-import { type ChangeStatusInput, changeStatusSchema } from "../schemas";
+import { type ChangeStatusInput, changeStatusSchema, type StatusDetails } from "../schemas";
 import { findVisibleLead } from "./scope";
 import { recordLeadActivity } from "./timeline";
 
 interface StatusChange {
   statusId: string;
   reason?: string | null;
+  /** Answers of other modules' status fields, e.g. `{ lossReasonId }` (M08). */
+  details?: StatusDetails | null;
 }
+
+const statusInfo = (status: {
+  key: string;
+  label: string;
+  category: string;
+  isTerminal: boolean;
+}): LeadStatusInfo => ({
+  key: status.key,
+  label: status.label,
+  category: status.category,
+  isTerminal: status.isTerminal,
+});
 
 /**
  * Applies a status change inside `tx` (M04-08): validates the transition, writes `LeadStatusHistory`, a timeline
@@ -23,18 +39,20 @@ interface StatusChange {
  * - Workflow statuses (New, Assigned, Visit, Revisit, Booking, Closed/Won) need `leads.status_override` unless
  *   `workflow` is set by the module that owns that workflow.
  * - Statuses marked "requires reason" need a reason.
+ * - Other modules' `lead.status.changing` hooks run before anything is saved and may refuse the change (M08: a loss
+ *   reason for Lost / Not Interested).
+ * - Milestones: `closedAt` while closed as won, `lostAt` while lost or not interested (cleared on reopen, with the
+ *   loss reason).
  */
 export async function applyStatusChange(
   tx: TenantDbOrTx,
   ctx: ServiceContext,
-  lead: { id: string; number: string; statusId: string },
+  lead: { id: string; number: string; statusId: string; ownerId: string | null },
   change: StatusChange,
   options: { workflow?: boolean } = {},
 ) {
-  const [current, target] = await Promise.all([
-    tx.leadStatus.findFirstOrThrow({ where: { id: lead.statusId } }),
-    tx.leadStatus.findFirst({ where: { id: change.statusId } }),
-  ]);
+  const current = await tx.leadStatus.findFirstOrThrow({ where: { id: lead.statusId } });
+  const target = await tx.leadStatus.findFirst({ where: { id: change.statusId } });
   if (!target || !target.isActive) {
     throw new ValidationError("Choose an active status.", {
       statusId: ["Unknown or inactive status"],
@@ -69,10 +87,34 @@ export async function applyStatusChange(
     });
   }
 
+  const notes: string[] = [];
+  let extraPayload: Record<string, unknown> = {};
+  for (const hook of getServerRegistry().extensions("lead.status.changing")) {
+    const result = await hook({
+      tx,
+      ctx,
+      lead: { id: lead.id, number: lead.number, ownerId: lead.ownerId },
+      from: statusInfo(current),
+      to: statusInfo(target),
+      reason,
+      details: change.details ?? {},
+      workflow: Boolean(options.workflow),
+    });
+    if (result?.note) notes.push(result.note);
+    if (result?.payload) extraPayload = { ...extraPayload, ...result.payload };
+  }
+  const note = notes.length ? ` · ${notes.join(" · ")}` : "";
+
   const now = new Date();
   await tx.lead.update({
     where: { id: lead.id },
-    data: { statusId: target.id, statusChangedAt: now, closedAt: target.isTerminal ? now : null },
+    data: {
+      statusId: target.id,
+      statusChangedAt: now,
+      closedAt: target.category === "WON" ? now : null,
+      lostAt: target.category === "LOST" ? now : null,
+      ...(target.category === "LOST" ? {} : { lossReasonId: null }),
+    },
   });
   await tx.leadStatusHistory.create({
     data: {
@@ -89,8 +131,9 @@ export async function applyStatusChange(
   await recordLeadActivity(tx, ctx, {
     leadId: lead.id,
     type: LEAD_ACTIVITY_TYPES.STATUS_CHANGED,
-    summary: `${reopened ? "Reopened" : "Changed status"}: ${current.label} → ${target.label}`,
+    summary: `${reopened ? "Reopened" : "Changed status"}: ${current.label} → ${target.label}${note}`,
     payload: {
+      ...extraPayload,
       from: { key: current.key, label: current.label, color: current.color },
       to: { key: target.key, label: target.label, color: target.color },
       reason,
@@ -102,9 +145,9 @@ export async function applyStatusChange(
     action: reopened ? "lead.reopen" : "lead.status_change",
     entityType: "Lead",
     entityId: lead.id,
-    summary: `${lead.number}: ${current.label} → ${target.label}${reason ? ` (${reason})` : ""}`,
+    summary: `${lead.number}: ${current.label} → ${target.label}${reason ? ` (${reason})` : ""}${note}`,
     changes: { status: { from: current.label, to: target.label } },
-    metadata: reason ? { reason } : undefined,
+    metadata: reason || notes.length ? { reason, notes } : undefined,
   });
   await publishEvent(tx, ctx, "lead.status_changed", {
     leadId: lead.id,
@@ -145,11 +188,11 @@ export async function setLeadStatusByKey(
   leadId: string,
   key: string,
   reason?: string | null,
-  options: { workflow?: boolean } = {},
+  options: { workflow?: boolean; details?: StatusDetails | null } = {},
 ) {
   const lead = await tx.lead.findFirst({
     where: { id: leadId, deletedAt: null },
-    select: { id: true, number: true, statusId: true },
+    select: { id: true, number: true, statusId: true, ownerId: true },
   });
   const status = await tx.leadStatus.findFirst({ where: { key }, select: { id: true } });
   if (!lead) throw new NotFoundError("Lead", leadId);
@@ -159,7 +202,7 @@ export async function setLeadStatusByKey(
     tx,
     ctx,
     lead,
-    { statusId: status.id, reason },
+    { statusId: status.id, reason, details: options.details },
     { workflow: options.workflow ?? true },
   );
 }

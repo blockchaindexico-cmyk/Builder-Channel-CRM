@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { DuePicker } from "@/components/shared/due-picker";
 import { useFormatters, useRegionalSettings } from "@/components/shared/regional-settings";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -27,7 +28,6 @@ import {
   completeFollowUpAction,
   rescheduleFollowUpAction,
 } from "../actions";
-import { DuePicker } from "./due-picker";
 import { emptyFollowUp, type FollowUpDraft, FollowUpFields } from "./follow-up-fields";
 
 export interface FollowUpTarget {

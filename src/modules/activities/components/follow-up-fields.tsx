@@ -1,5 +1,6 @@
 "use client";
 
+import { DuePicker } from "@/components/shared/due-picker";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -9,8 +10,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-
-import { DuePicker } from "./due-picker";
 
 const NONE = "__none__";
 

@@ -176,6 +176,12 @@ model Membership {
   callsMade               CallLog[]                @relation("CallCaller")
   followUpsAssigned       FollowUp[]               @relation("FollowUpAssignee")
 
+  // M08
+  visitsAssigned   SiteVisit[] @relation("SiteVisitAssignee")
+  visitsConducted  SiteVisit[] @relation("SiteVisitConductor")
+  bookingsCredited Booking[]   @relation("BookingExecutive")
+  bookingsManaged  Booking[]   @relation("BookingManager")
+
   @@unique([organizationId, userId])
   @@unique([organizationId, id])
   @@unique([organizationId, employeeCode])

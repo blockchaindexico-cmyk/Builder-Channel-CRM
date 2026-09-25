@@ -17,7 +17,7 @@ import {
 } from "@/modules/leads/server/list-query";
 import { getLeadFormOptions } from "@/modules/leads/server/masters";
 import { loadCatalogFilterOptions, statusPermissions } from "@/modules/leads/server/page-data";
-import { listSavedViews } from "@/modules/leads/server/views";
+import { listLeadListPresets, listSavedViews } from "@/modules/leads/server/views";
 import { requirePermission } from "@/platform/rbac/guard";
 import { getRequestContext } from "@/platform/tenant/request-context";
 import { uuidOrNull } from "@/platform/validation";
@@ -77,7 +77,12 @@ export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
         }
       />
       <div className="space-y-4">
-        <LeadViewsBar views={listOptions.views} current={view} savedViews={savedViews} />
+        <LeadViewsBar
+          views={listOptions.views}
+          current={view}
+          savedViews={savedViews}
+          presets={listLeadListPresets(ctx)}
+        />
         <LeadsTable
           rows={leads.rows}
           total={leads.total}

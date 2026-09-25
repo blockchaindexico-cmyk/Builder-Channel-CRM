@@ -28,11 +28,64 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { actionErrorMessage } from "@/lib/action-result";
 import { plural } from "@/lib/utils";
+import { clientUiRegistry } from "@/modules/registry.client";
 
 import { bulkChangeStatusAction, changeLeadStatusAction } from "../actions";
 import { STATUS_CATEGORIES, SYSTEM_DRIVEN_STATUS_KEYS } from "../constants";
+import type { LeadStatusInfo } from "../extensions";
 import type { LeadStatusRow } from "../server/masters";
 import { LeadStatusBadge } from "./badges";
+
+type Details = Record<string, string | number | boolean | null>;
+
+const statusFields = clientUiRegistry
+  .extensions("lead.status.fields")
+  .toSorted((a, b) => a.order - b.order);
+
+const infoOf = (status: {
+  key: string;
+  label: string;
+  category: string;
+  isTerminal: boolean;
+}): LeadStatusInfo => ({
+  key: status.key,
+  label: status.label,
+  category: status.category,
+  isTerminal: status.isTerminal,
+});
+
+/**
+ * Fields other modules add for the chosen status (`lead.status.fields`, e.g. M08's loss reason); their answers go
+ * with the change as `details`.
+ */
+export function LeadStatusExtraFields({
+  target,
+  current,
+  details,
+  onChange,
+  disabled,
+}: {
+  target: LeadStatusInfo;
+  current?: LeadStatusInfo;
+  details: Details;
+  onChange: (details: Details) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <>
+      {statusFields.map(({ key, component: Fields }) => (
+        <Fields
+          key={key}
+          target={target}
+          current={current}
+          details={details}
+          onChange={onChange}
+          disabled={disabled}
+        />
+      ))}
+    </>
+  );
+}
 
 export interface StatusPermissions {
   canReopen: boolean;
@@ -54,7 +107,14 @@ export function StatusDialog({
 }: {
   statuses: LeadStatusRow[];
   /** Current status (single lead); omitted for bulk changes. */
-  current?: { id: string; isTerminal: boolean; label: string; color: string };
+  current?: {
+    id: string;
+    key: string;
+    category: string;
+    isTerminal: boolean;
+    label: string;
+    color: string;
+  };
   leadIds: string[];
   permissions: StatusPermissions;
   trigger?: ReactNode;
@@ -64,6 +124,7 @@ export function StatusDialog({
   const [open, setOpen] = useState(false);
   const [statusId, setStatusId] = useState("");
   const [reason, setReason] = useState("");
+  const [details, setDetails] = useState<Details>({});
   const [busy, setBusy] = useState(false);
   const target = statuses.find((status) => status.id === statusId);
 
@@ -89,13 +150,19 @@ export function StatusDialog({
         leadId: leadIds[0]!,
         statusId: target.id,
         reason,
+        details,
       });
       setBusy(false);
       const error = actionErrorMessage(result);
       if (error) return void toast.error(error);
       toast.success(`Status changed to ${target.label}`);
     } else {
-      const result = await bulkChangeStatusAction({ leadIds, statusId: target.id, reason });
+      const result = await bulkChangeStatusAction({
+        leadIds,
+        statusId: target.id,
+        reason,
+        details,
+      });
       setBusy(false);
       const error = actionErrorMessage(result);
       if (error) return void toast.error(error);
@@ -110,6 +177,7 @@ export function StatusDialog({
     setOpen(false);
     setStatusId("");
     setReason("");
+    setDetails({});
     onDone?.();
     router.refresh();
   }
@@ -141,7 +209,13 @@ export function StatusDialog({
         <div className="space-y-4">
           <div className="grid gap-2">
             <Label htmlFor="status-target">New status</Label>
-            <Select value={statusId} onValueChange={setStatusId}>
+            <Select
+              value={statusId}
+              onValueChange={(value) => {
+                setStatusId(value);
+                setDetails({});
+              }}
+            >
               <SelectTrigger id="status-target" className="w-full">
                 <SelectValue placeholder="Choose a status" />
               </SelectTrigger>
@@ -170,6 +244,15 @@ export function StatusDialog({
               </p>
             ) : null}
           </div>
+          {target ? (
+            <LeadStatusExtraFields
+              target={infoOf(target)}
+              current={current ? infoOf(current) : undefined}
+              details={details}
+              onChange={setDetails}
+              disabled={busy}
+            />
+          ) : null}
           {target ? (
             <div className="grid gap-2">
               <Label htmlFor="status-reason">

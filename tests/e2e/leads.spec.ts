@@ -97,16 +97,21 @@ test.describe("leads", () => {
     await expect(executive.getByText("brochure.pdf attached")).toBeVisible();
 
     await changeStatus(executive, "Positive");
-    // "Lost" needs a reason.
+    // "Lost" needs a reason — and a loss reason (M08).
     await executive.getByRole("button", { name: "Change status" }).click();
     let dialog = executive.getByRole("dialog");
-    await dialog.getByRole("combobox").click();
+    await dialog.getByRole("combobox", { name: "New status" }).click();
     await executive.getByRole("option", { name: "Lost", exact: true }).click();
     await dialog.getByRole("button", { name: "Change status" }).click();
     await expect(executive.getByText('Give a reason for "Lost".')).toBeVisible();
-    await dialog.getByLabel(/Reason/).fill("Bought a resale flat");
+    await dialog.getByLabel(/^Reason/).fill("Bought a resale flat");
+    await dialog.getByRole("button", { name: "Change status" }).click();
+    await expect(executive.getByText("Choose a loss reason.")).toBeVisible();
+    await dialog.getByRole("combobox", { name: "Loss reason" }).click();
+    await executive.getByRole("option", { name: "Bought elsewhere" }).click();
     await dialog.getByRole("button", { name: "Change status" }).click();
     await expect(executive.getByText("Status changed to Lost")).toBeVisible();
+    await expect(executive.getByRole("heading", { level: 1 })).toContainText("Bought elsewhere");
 
     // Executives cannot reopen a closed lead.
     await executive.getByRole("button", { name: "Change status" }).click();

@@ -13,6 +13,7 @@ import { ACTIVITY_PERMISSIONS } from "@/modules/activities/permissions";
 import { getMyAgenda } from "@/modules/activities/server/agenda";
 import type { FollowUpRow } from "@/modules/activities/server/follow-ups";
 import { getRegionalSettings } from "@/modules/organization";
+import { uiRegistry } from "@/modules/registry.ui";
 import { requirePermission } from "@/platform/rbac/guard";
 import { getRequestContext } from "@/platform/tenant/request-context";
 
@@ -54,7 +55,17 @@ export default async function AgendaPage() {
   const ctx = await getRequestContext();
   requirePermission(ctx, ACTIVITY_PERMISSIONS.followUpsView);
   const now = new Date();
-  const [agenda, regional] = await Promise.all([getMyAgenda(ctx, now), getRegionalSettings(ctx)]);
+  const [agenda, regional, sections] = await Promise.all([
+    getMyAgenda(ctx, now),
+    getRegionalSettings(ctx),
+    Promise.all(
+      uiRegistry
+        .extensions("agenda.section")
+        .filter((section) => !section.permission || ctx.permissions.has(section.permission))
+        .toSorted((a, b) => a.order - b.order)
+        .map(async (section) => ({ key: section.key, tab: await section.load({ now }) })),
+    ),
+  ]);
   const canManage = ctx.permissions.has(ACTIVITY_PERMISSIONS.followUpsManage);
   const canCall = ctx.permissions.has(ACTIVITY_PERMISSIONS.callsLog);
   const list = (
@@ -79,7 +90,7 @@ export default async function AgendaPage() {
     <>
       <PageHeader
         title="My agenda"
-        description="Your follow-ups and callbacks: what is overdue, due today and coming up."
+        description="Your follow-ups, callbacks and site visits: what is overdue, due today and coming up."
       />
       <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Overdue" value={agenda.overdue.length} icon={CalendarClock} tone="warning" />
@@ -134,6 +145,11 @@ export default async function AgendaPage() {
               <WeekCalendar week={agenda.week} today={zonedClock(now, regional.timezone).date} />
             ),
           },
+          ...sections.flatMap((section) =>
+            section.tab
+              ? [{ value: section.key, label: section.tab.label, content: section.tab.content }]
+              : [],
+          ),
         ]}
       />
     </>

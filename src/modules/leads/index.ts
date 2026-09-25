@@ -14,10 +14,18 @@ export type {
   LeadDetailPanel,
   LeadListFilter,
   LeadListFilterOption,
+  LeadListPreset,
+  LeadStatusChangingHook,
+  LeadStatusChangingInput,
+  LeadStatusChangingResult,
+  LeadStatusFields,
+  LeadStatusFieldsProps,
+  LeadStatusInfo,
   LeadTimelineRenderer,
 } from "./extensions";
 export { leadsManifest } from "./manifest";
 export { LEAD_PERMISSIONS } from "./permissions";
+export { type StatusDetails, statusDetailsSchema } from "./schemas";
 export { type LeadEngagement, setLeadEngagement } from "./server/engagement";
 export {
   assertLeadVisible,
@@ -33,6 +41,7 @@ export {
   listLeadStatuses,
   seedLeadMasters,
 } from "./server/masters";
+export { ensureLeadInterest, type LeadMilestones, setLeadMilestones } from "./server/milestones";
 export { setLeadOwner } from "./server/owner";
 export { findVisibleLead, isLeadInScope, leadScopeWhere } from "./server/scope";
 export {

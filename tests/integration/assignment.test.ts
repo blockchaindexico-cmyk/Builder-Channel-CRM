@@ -18,6 +18,7 @@ import { saveAssignmentRule } from "@/modules/assignment/server/rules";
 import { updateAssignmentSettings } from "@/modules/assignment/server/settings";
 import { getTeamWorkload, listUnassignedQueue } from "@/modules/assignment/server/workload";
 import { seedCatalogMasters } from "@/modules/catalog/server/masters";
+import { seedDealMasters } from "@/modules/deals/server/masters";
 import { createLead, listLeads } from "@/modules/leads/server/leads";
 import { seedLeadMasters } from "@/modules/leads/server/masters";
 import { changeLeadStatus } from "@/modules/leads/server/status";
@@ -38,6 +39,7 @@ async function setup() {
   await seedLeadMasters(db, orgId);
   await seedAssignmentMasters(db, orgId);
   await seedAssignmentMasters(db, orgId);
+  await seedDealMasters(db, orgId);
   const { role } = org;
   const admin = await createMember(orgId, role("admin").id, { name: "Asha Admin" });
   const manager = await createMember(orgId, role("manager").id, {
@@ -409,9 +411,13 @@ describe("lead assignment (M05)", () => {
       name: "Handover Closed",
       mobile: nextMobile(),
     });
+    const lossReason = await prisma.lossReason.findFirstOrThrow({
+      where: { organizationId: env.orgId, key: "BOUGHT_ELSEWHERE" },
+    });
     await changeLeadStatus(env.ctx.exec1, closed.id, {
       statusId: env.status("LOST").id,
       reason: "Bought elsewhere",
+      details: { lossReasonId: lossReason.id },
     });
     const openBefore = await prisma.lead.count({
       where: {

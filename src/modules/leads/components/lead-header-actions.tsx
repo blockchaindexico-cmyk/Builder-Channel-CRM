@@ -27,7 +27,14 @@ export function LeadHeaderActions({
     number: string;
     mobile: string | null;
     email: string | null;
-    status: { id: string; isTerminal: boolean; label: string; color: string };
+    status: {
+      id: string;
+      key: string;
+      category: string;
+      isTerminal: boolean;
+      label: string;
+      color: string;
+    };
   };
   statuses: LeadStatusRow[];
   canChangeStatus: boolean;

@@ -695,6 +695,7 @@ export async function getLead(ctx: ServiceContext, leadId: string) {
       owner: { select: { id: true, user: { select: { name: true } } } },
       createdBy: { select: { id: true, user: { select: { name: true } } } },
       duplicateOf: { select: { id: true, number: true, name: true, ownerId: true } },
+      lossReason: { select: { id: true, label: true } },
       interests: {
         orderBy: { createdAt: "asc" },
         include: {
@@ -794,7 +795,11 @@ export async function getLead(ctx: ServiceContext, leadId: string) {
     lastActivityAt: lead.lastActivityAt.toISOString(),
     nextFollowUpAt: lead.nextFollowUpAt?.toISOString() ?? null,
     lastContactedAt: lead.lastContactedAt?.toISOString() ?? null,
+    firstVisitAt: lead.firstVisitAt?.toISOString() ?? null,
+    bookedAt: lead.bookedAt?.toISOString() ?? null,
     closedAt: lead.closedAt?.toISOString() ?? null,
+    lostAt: lead.lostAt?.toISOString() ?? null,
+    lossReason: lead.lossReason,
     createdAt: lead.createdAt.toISOString(),
     updatedAt: lead.updatedAt.toISOString(),
   };

@@ -79,6 +79,11 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
           <span className="flex flex-wrap items-center gap-3">
             {lead.name}
             <LeadStatusBadge label={lead.status.label} color={lead.status.color} />
+            {lead.lossReason ? (
+              <span className="text-sm font-normal text-muted-foreground">
+                {lead.lossReason.label}
+              </span>
+            ) : null}
             <TemperatureBadge value={lead.temperature} />
           </span>
         }
@@ -93,9 +98,12 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
                     lead: {
                       id: lead.id,
                       number: lead.number,
+                      name: lead.name,
                       ownerId: lead.owner?.membershipId ?? null,
                       ownerName: lead.owner?.name ?? null,
                       statusKey: lead.status.key,
+                      statusCategory: lead.status.category,
+                      isTerminal: lead.status.isTerminal,
                     },
                   })}
                 </span>

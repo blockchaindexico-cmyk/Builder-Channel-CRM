@@ -109,9 +109,23 @@ export const updateLeadSchema = z.object(leadFields).superRefine(refineLead);
 export type UpdateLeadInput = z.input<typeof updateLeadSchema>;
 export type UpdateLeadValues = z.output<typeof updateLeadSchema>;
 
+/**
+ * Extra answers collected with a status change by other modules' `lead.status.fields` (e.g. M08's loss reason) and
+ * checked by their `lead.status.changing` hooks. Flat and small on purpose.
+ */
+export const statusDetailsSchema = z
+  .record(
+    z.string().regex(/^[a-zA-Z][a-zA-Z0-9]{0,39}$/),
+    z.union([z.string().max(500), z.number(), z.boolean(), z.null()]),
+  )
+  .refine((details) => Object.keys(details).length <= 10, "Too many details")
+  .optional();
+export type StatusDetails = NonNullable<z.output<typeof statusDetailsSchema>>;
+
 export const changeStatusSchema = z.object({
   statusId: z.uuid("Choose a status"),
   reason: optionalText(500),
+  details: statusDetailsSchema,
 });
 export type ChangeStatusInput = z.input<typeof changeStatusSchema>;
 

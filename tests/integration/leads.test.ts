@@ -4,6 +4,7 @@ import { toTableQuery } from "@/lib/table-query";
 import { createBuilder } from "@/modules/catalog/server/builders";
 import { getCatalogOptions, seedCatalogMasters } from "@/modules/catalog/server/masters";
 import { createProject, deleteProject } from "@/modules/catalog/server/projects";
+import { seedDealMasters } from "@/modules/deals/server/masters";
 import {
   dismissDuplicate,
   listDuplicateQueue,
@@ -68,6 +69,7 @@ async function setup() {
   const db = createTenantDb(orgId);
   await seedCatalogMasters(db, orgId);
   await seedLeadMasters(db, orgId);
+  await seedDealMasters(db, orgId);
   const { role } = org;
   const admin = await createMember(orgId, role("admin").id, { name: "Asha Admin" });
   const manager = await createMember(orgId, role("manager").id, {
@@ -112,6 +114,8 @@ async function setup() {
   const status = (key: string) => statuses.find((entry) => entry.key === key)!.id;
   const sources = await prisma.leadSource.findMany({ where: { organizationId: orgId } });
   const source = (code: string) => sources.find((entry) => entry.code === code)!.id;
+  const lossReasons = await prisma.lossReason.findMany({ where: { organizationId: orgId } });
+  const lossReason = (key: string) => lossReasons.find((entry) => entry.key === key)!.id;
   return {
     orgId,
     members: { admin, manager, exec1, exec2, otherManager, exec3 },
@@ -122,6 +126,7 @@ async function setup() {
     options,
     status,
     source,
+    lossReason,
   };
 }
 
@@ -363,11 +368,21 @@ describe("leads (M04)", () => {
       await expect(
         changeLeadStatus(env.ctx.exec1, execLead.id, { statusId: env.status("LOST") }),
       ).rejects.toBeInstanceOf(ValidationError);
+      // M08: closing as lost also needs a loss reason.
+      await expect(
+        changeLeadStatus(env.ctx.exec1, execLead.id, {
+          statusId: env.status("LOST"),
+          reason: "Bought elsewhere",
+        }),
+      ).rejects.toBeInstanceOf(ValidationError);
       await changeLeadStatus(env.ctx.exec1, execLead.id, {
         statusId: env.status("LOST"),
         reason: "Bought elsewhere",
+        details: { lossReasonId: env.lossReason("BOUGHT_ELSEWHERE") },
       });
-      expect((await getLead(env.ctx.exec1, execLead.id)).closedAt).not.toBeNull();
+      const lost = await getLead(env.ctx.exec1, execLead.id);
+      expect(lost).toMatchObject({ closedAt: null, lossReason: { label: "Bought elsewhere" } });
+      expect(lost.lostAt).not.toBeNull();
       await expect(
         changeLeadStatus(env.ctx.exec1, execLead.id, { statusId: env.status("POSITIVE") }),
       ).rejects.toBeInstanceOf(ForbiddenError);
@@ -375,7 +390,11 @@ describe("leads (M04)", () => {
         statusId: env.status("FOLLOW_UP"),
       });
       expect(reopened.reopened).toBe(true);
-      expect((await getLead(env.ctx.exec1, execLead.id)).closedAt).toBeNull();
+      expect(await getLead(env.ctx.exec1, execLead.id)).toMatchObject({
+        closedAt: null,
+        lostAt: null,
+        lossReason: null,
+      });
 
       // Workflows set their statuses without the override permission (M05/M08).
       await prisma.$transaction(async () => {

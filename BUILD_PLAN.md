@@ -826,25 +826,25 @@ NOT_INTERESTED / BOOKING_CANCELLED); lead milestones `firstVisitAt`, `bookedAt`,
 - Booking value fields are visible only with `bookings.view_value`.
 
 **Checklist**
-- [ ] **M08-01** Models & migrations, lead milestone fields.
-- [ ] **M08-02** Seed visit outcomes & loss reasons; settings pages for both.
+- [x] **M08-01** Models & migrations, lead milestone fields.
+- [x] **M08-02** Seed visit outcomes & loss reasons; settings pages for both.
 
 *Visits & revisits*
-- [ ] **M08-03** Schedule visit (project from lead interests or add; date/time; pickup; notes) → status Visit; reminder via M06.
-- [ ] **M08-04** Update visit: confirm, complete (outcome, feedback, next-step prompt), no-show, cancel (reason), reschedule (history kept).
-- [ ] **M08-05** Create revisit linked to previous visit → status Revisit; numbering (Visit 1, Revisit 1, …).
-- [ ] **M08-06** Visits panel on lead + timeline; `/visits` list & calendar (filters: date, project, builder, executive, status); manager team view.
+- [x] **M08-03** Schedule visit (project from lead interests or add; date/time; pickup; notes) → status Visit; reminder via M06.
+- [x] **M08-04** Update visit: confirm, complete (outcome, feedback, next-step prompt), no-show, cancel (reason), reschedule (history kept).
+- [x] **M08-05** Create revisit linked to previous visit → status Revisit; numbering (Visit 1, Revisit 1, …).
+- [x] **M08-06** Visits panel on lead + timeline; `/visits` list & calendar (filters: date, project, builder, executive, status); manager team view.
 
 *Bookings & closures*
-- [ ] **M08-07** Convert to booking: booking form + documents → booking number → status Booking.
-- [ ] **M08-08** Booking detail page + bookings list (filters: builder, project, manager, executive, date, status).
-- [ ] **M08-09** Booking progression with configurable intermediate stages (e.g. agreement, registration) → Closed/Won; status history + audited value changes.
-- [ ] **M08-10** Booking cancellation with reason → lead Lost or back to active; history retained.
-- [ ] **M08-11** Mark Lost / Not Interested with mandatory reason & notes; reopen with permission; Lost & Not-interested views.
-- [ ] **M08-12** Lead list filters: visit status, has revisit, booking status, closure status, loss reason.
-- [ ] **M08-13** Handle `lead.reassigned`: transfer upcoming visits (setting); booking credit stays with the booking executive unless changed explicitly.
-- [ ] **M08-14** Permissions (`visits.*`, `bookings.*`, `bookings.view_value`, `leads.mark_lost`, masters) + events (`visit.*`, `booking.created|updated|closed|cancelled`, `lead.lost`, `lead.not_interested`) + notifications (visit reminders, booking/closure updates to manager & admin).
-- [ ] **M08-15** Tests: status automation, revisit chain, booking lifecycle & history, cancellation paths, milestone fields for conversion reporting.
+- [x] **M08-07** Convert to booking: booking form + documents → booking number → status Booking.
+- [x] **M08-08** Booking detail page + bookings list (filters: builder, project, manager, executive, date, status).
+- [x] **M08-09** Booking progression with configurable intermediate stages (e.g. agreement, registration) → Closed/Won; status history + audited value changes.
+- [x] **M08-10** Booking cancellation with reason → lead Lost or back to active; history retained.
+- [x] **M08-11** Mark Lost / Not Interested with mandatory reason & notes; reopen with permission; Lost & Not-interested views.
+- [x] **M08-12** Lead list filters: visit status, has revisit, booking status, closure status, loss reason.
+- [x] **M08-13** Handle `lead.reassigned`: transfer upcoming visits (setting); booking credit stays with the booking executive unless changed explicitly.
+- [x] **M08-14** Permissions (`visits.*`, `bookings.*`, `bookings.view_value`, `leads.mark_lost`, masters) + events (`visit.*`, `booking.created|updated|closed|cancelled`, `lead.lost`, `lead.not_interested`) + notifications (visit reminders, booking/closure updates to manager & admin).
+- [x] **M08-15** Tests: status automation, revisit chain, booking lifecycle & history, cancellation paths, milestone fields for conversion reporting.
 
 **Acceptance criteria**
 - A lead can move Visit → Revisit → Booking → Closed/Won (or Lost with reason) with each step visible in its timeline.

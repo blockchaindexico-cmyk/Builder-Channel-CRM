@@ -1,0 +1,289 @@
+// M08 — Site visits, revisits, bookings & closures (BUILD_PLAN M08).
+
+enum SiteVisitStatus {
+  SCHEDULED
+  /// The customer confirmed they are coming.
+  CONFIRMED
+  COMPLETED
+  NO_SHOW
+  CANCELLED
+  /// Moved to a new time: the next visit of the chain points back here.
+  RESCHEDULED
+}
+
+enum VisitOutcomeCategory {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+  /// Ready to book, or booked on the spot.
+  BOOKING
+}
+
+/// Next step offered first after a visit outcome.
+enum VisitNextStep {
+  REVISIT
+  FOLLOW_UP
+  BOOKING
+  CLOSE
+}
+
+/// How a completed site visit went (master data), e.g. "Liked the project", "Wants other options".
+model VisitOutcome {
+  id             String               @id @default(uuid(7)) @db.Uuid
+  organizationId String               @map("organization_id") @db.Uuid
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// Key of a seeded outcome (null for outcomes added by the organization).
+  key            String?
+  label          String
+  category       VisitOutcomeCategory
+  nextStep       VisitNextStep?       @map("next_step")
+  isActive       Boolean              @default(true) @map("is_active")
+  sortOrder      Int                  @default(0) @map("sort_order")
+  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  visits SiteVisit[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, label])
+  @@unique([organizationId, key])
+  @@map("visit_outcomes")
+}
+
+/// A site visit or revisit of a lead to a project (PRD §11). Nothing is deleted: completed, no-show, cancelled and
+/// rescheduled visits stay in the history, and a reschedule links the new visit to the old one.
+model SiteVisit {
+  id                String          @id @default(uuid(7)) @db.Uuid
+  organizationId    String          @map("organization_id") @db.Uuid
+  organization      Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leadId            String          @map("lead_id") @db.Uuid
+  lead              Lead            @relation(fields: [organizationId, leadId], references: [organizationId, id], onDelete: Cascade)
+  projectId         String          @map("project_id") @db.Uuid
+  project           Project         @relation(fields: [organizationId, projectId], references: [organizationId, id], onDelete: Restrict)
+  /// Builder of the project when the visit was planned (reports by builder).
+  builderId         String          @map("builder_id") @db.Uuid
+  builder           Builder         @relation(fields: [organizationId, builderId], references: [organizationId, id], onDelete: Restrict)
+  /// "Visit 1, 2…" or "Revisit 1, 2…" of the lead; a rescheduled visit keeps its number.
+  number            Int
+  /// Planned after the customer had already completed a visit.
+  isRevisit         Boolean         @default(false) @map("is_revisit")
+  /// Completed visit this revisit follows.
+  parentVisitId     String?         @map("parent_visit_id") @db.Uuid
+  parentVisit       SiteVisit?      @relation("SiteVisitRevisits", fields: [organizationId, parentVisitId], references: [organizationId, id], onDelete: Restrict)
+  revisits          SiteVisit[]     @relation("SiteVisitRevisits")
+  scheduledAt       DateTime        @map("scheduled_at") @db.Timestamptz(3)
+  status            SiteVisitStatus @default(SCHEDULED)
+  /// Executive accompanying the customer: the lead owner (upcoming visits move with the lead).
+  assignedToId      String?         @map("assigned_to_id") @db.Uuid
+  assignedTo        Membership?     @relation("SiteVisitAssignee", fields: [organizationId, assignedToId], references: [organizationId, id], onDelete: Restrict)
+  pickupRequired    Boolean         @default(false) @map("pickup_required")
+  pickupAddress     String?         @map("pickup_address")
+  /// People coming, the customer included.
+  attendees         Int?
+  notes             String?
+  createdById       String?         @map("created_by_id") @db.Uuid
+  createdByName     String          @map("created_by_name")
+  confirmedAt       DateTime?       @map("confirmed_at") @db.Timestamptz(3)
+  /// Who went with the customer (recorded with the outcome).
+  conductedById     String?         @map("conducted_by_id") @db.Uuid
+  conductedBy       Membership?     @relation("SiteVisitConductor", fields: [organizationId, conductedById], references: [organizationId, id], onDelete: Restrict)
+  conductedByName   String?         @map("conducted_by_name")
+  completedAt       DateTime?       @map("completed_at") @db.Timestamptz(3)
+  outcomeId         String?         @map("outcome_id") @db.Uuid
+  outcome           VisitOutcome?   @relation(fields: [organizationId, outcomeId], references: [organizationId, id], onDelete: Restrict)
+  /// The customer's feedback on the project.
+  feedback          String?
+  noShowAt          DateTime?       @map("no_show_at") @db.Timestamptz(3)
+  cancelledAt       DateTime?       @map("cancelled_at") @db.Timestamptz(3)
+  cancelReason      String?         @map("cancel_reason")
+  /// Previous visit of a reschedule chain.
+  rescheduledFromId String?         @map("rescheduled_from_id") @db.Uuid
+  rescheduledFrom   SiteVisit?      @relation("SiteVisitChain", fields: [organizationId, rescheduledFromId], references: [organizationId, id], onDelete: Restrict)
+  rescheduledTo     SiteVisit?      @relation("SiteVisitChain")
+  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  bookings Booking[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, rescheduledFromId])
+  @@index([organizationId, leadId, scheduledAt])
+  @@index([organizationId, assignedToId, status, scheduledAt])
+  @@index([organizationId, projectId, scheduledAt])
+  @@index([organizationId, scheduledAt])
+  @@map("site_visits")
+}
+
+enum LossReasonScope {
+  LOST
+  NOT_INTERESTED
+  BOOKING_CANCELLED
+}
+
+/// Why a lead was lost or not interested, or a booking cancelled (PRD §12, §17).
+model LossReason {
+  id             String            @id @default(uuid(7)) @db.Uuid
+  organizationId String            @map("organization_id") @db.Uuid
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  key            String?
+  label          String
+  appliesTo      LossReasonScope[] @map("applies_to")
+  isActive       Boolean           @default(true) @map("is_active")
+  sortOrder      Int               @default(0) @map("sort_order")
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  leads    Lead[]
+  bookings Booking[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, label])
+  @@unique([organizationId, key])
+  @@map("loss_reasons")
+}
+
+enum BookingStatus {
+  ACTIVE
+  CLOSED_WON
+  CANCELLED
+}
+
+/// A step between booking and closure (Q-09), e.g. Booked → Agreement signed → Registration; configurable.
+model BookingStage {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  key            String?
+  label          String
+  isActive       Boolean      @default(true) @map("is_active")
+  sortOrder      Int          @default(0) @map("sort_order")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  bookings Booking[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, label])
+  @@unique([organizationId, key])
+  @@map("booking_stages")
+}
+
+/// A booking of a unit by a lead (PRD §12), from booking to closure (won) or cancellation. Every change is kept in
+/// `BookingHistory`.
+model Booking {
+  id                  String             @id @default(uuid(7)) @db.Uuid
+  organizationId      String             @map("organization_id") @db.Uuid
+  organization        Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// Unique per organization (rule T7), e.g. BK-000045.
+  number              String
+  leadId              String             @map("lead_id") @db.Uuid
+  lead                Lead               @relation(fields: [organizationId, leadId], references: [organizationId, id], onDelete: Cascade)
+  projectId           String             @map("project_id") @db.Uuid
+  project             Project            @relation(fields: [organizationId, projectId], references: [organizationId, id], onDelete: Restrict)
+  builderId           String             @map("builder_id") @db.Uuid
+  builder             Builder            @relation(fields: [organizationId, builderId], references: [organizationId, id], onDelete: Restrict)
+  /// Site visit that led to the booking, if any.
+  visitId             String?            @map("visit_id") @db.Uuid
+  visit               SiteVisit?         @relation(fields: [organizationId, visitId], references: [organizationId, id], onDelete: Restrict)
+  /// Executive credited with the booking (Q-10); changes only when someone changes it explicitly.
+  executiveId         String             @map("executive_id") @db.Uuid
+  executive           Membership         @relation("BookingExecutive", fields: [organizationId, executiveId], references: [organizationId, id], onDelete: Restrict)
+  /// The executive's manager when the booking was made or its executive changed (reports by manager).
+  managerId           String?            @map("manager_id") @db.Uuid
+  manager             Membership?        @relation("BookingManager", fields: [organizationId, managerId], references: [organizationId, id], onDelete: Restrict)
+  customerName        String             @map("customer_name")
+  coApplicantName     String?            @map("co_applicant_name")
+  unitNumber          String?            @map("unit_number")
+  tower               String?
+  floor               String?
+  configurationTypeId String?            @map("configuration_type_id") @db.Uuid
+  configurationType   ConfigurationType? @relation(fields: [organizationId, configurationTypeId], references: [organizationId, id], onDelete: Restrict)
+  /// Carpet area in square feet.
+  area                Decimal?           @db.Decimal(10, 2)
+  bookingDate         DateTime           @map("booking_date") @db.Date
+  /// Value fields: visible and editable only with `bookings.view_value` (Q-16).
+  agreementValue      Decimal?           @map("agreement_value") @db.Decimal(14, 2)
+  tokenAmount         Decimal?           @map("token_amount") @db.Decimal(14, 2)
+  paymentPlan         String?            @map("payment_plan")
+  /// The builder's booking or application reference.
+  builderReference    String?            @map("builder_reference")
+  status              BookingStatus      @default(ACTIVE)
+  stageId             String?            @map("stage_id") @db.Uuid
+  stage               BookingStage?      @relation(fields: [organizationId, stageId], references: [organizationId, id], onDelete: Restrict)
+  remarks             String?
+  createdById         String?            @map("created_by_id") @db.Uuid
+  createdByName       String             @map("created_by_name")
+  closedAt            DateTime?          @map("closed_at") @db.Timestamptz(3)
+  closedByName        String?            @map("closed_by_name")
+  cancelledAt         DateTime?          @map("cancelled_at") @db.Timestamptz(3)
+  cancelledByName     String?            @map("cancelled_by_name")
+  cancelReasonId      String?            @map("cancel_reason_id") @db.Uuid
+  cancelReason        LossReason?        @relation(fields: [organizationId, cancelReasonId], references: [organizationId, id], onDelete: Restrict)
+  cancelNotes         String?            @map("cancel_notes")
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  history BookingHistory[]
+  files   BookingFile[]
+
+  @@unique([organizationId, number])
+  @@unique([organizationId, id])
+  @@index([organizationId, leadId])
+  @@index([organizationId, status, bookingDate(sort: Desc)])
+  @@index([organizationId, executiveId, bookingDate(sort: Desc)])
+  @@index([organizationId, managerId, bookingDate(sort: Desc)])
+  @@index([organizationId, projectId, bookingDate(sort: Desc)])
+  @@index([organizationId, builderId, bookingDate(sort: Desc)])
+  @@map("bookings")
+}
+
+enum BookingHistoryType {
+  CREATED
+  UPDATED
+  STAGE_CHANGED
+  CLOSED
+  CANCELLED
+  FILE_ADDED
+  FILE_REMOVED
+}
+
+/// Every change of a booking (PRD §12 "retain the history of booking and closure changes"), never edited.
+model BookingHistory {
+  id             String             @id @default(uuid(7)) @db.Uuid
+  organizationId String             @map("organization_id") @db.Uuid
+  bookingId      String             @map("booking_id") @db.Uuid
+  booking        Booking            @relation(fields: [organizationId, bookingId], references: [organizationId, id], onDelete: Cascade)
+  type           BookingHistoryType
+  fromStatus     BookingStatus?     @map("from_status")
+  toStatus       BookingStatus?     @map("to_status")
+  fromStage      String?            @map("from_stage")
+  toStage        String?            @map("to_stage")
+  /// Changed fields { field: { from, to } } as display values; value fields are shown only with the permission.
+  changes        Json               @default("{}")
+  note           String?
+  actorId        String?            @map("actor_id") @db.Uuid
+  actorName      String             @map("actor_name")
+  occurredAt     DateTime           @default(now()) @map("occurred_at") @db.Timestamptz(3)
+
+  @@index([organizationId, bookingId, occurredAt(sort: Desc)])
+  @@map("booking_history")
+}
+
+/// Documents of a booking (booking form, cheque copy, agreement…). Removal is a soft delete.
+model BookingFile {
+  id             String     @id @default(uuid(7)) @db.Uuid
+  organizationId String     @map("organization_id") @db.Uuid
+  bookingId      String     @map("booking_id") @db.Uuid
+  booking        Booking    @relation(fields: [organizationId, bookingId], references: [organizationId, id], onDelete: Cascade)
+  fileId         String     @map("file_id") @db.Uuid
+  file           FileObject @relation(fields: [organizationId, fileId], references: [organizationId, id], onDelete: Restrict)
+  title          String
+  uploadedById   String?    @map("uploaded_by_id") @db.Uuid
+  uploadedByName String     @map("uploaded_by_name")
+  deletedAt      DateTime?  @map("deleted_at") @db.Timestamptz(3)
+  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@unique([organizationId, fileId])
+  @@index([organizationId, bookingId])
+  @@map("booking_files")
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Bookmark, BookmarkPlus, Trash2, Users } from "lucide-react";
+import { Bookmark, BookmarkPlus, ListFilter, Trash2, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -31,7 +31,7 @@ import { cn } from "@/lib/utils";
 
 import { deleteViewAction, saveViewAction } from "../actions";
 import type { LeadView } from "../server/leads";
-import type { SavedViewRow } from "../server/views";
+import type { ListPresetRow, SavedViewRow } from "../server/views";
 
 const VIEW_LABELS: Record<LeadView, string> = {
   all: "All leads",
@@ -41,16 +41,18 @@ const VIEW_LABELS: Record<LeadView, string> = {
   duplicates: "Duplicates",
 };
 
-/** Role-based default views and saved personal/shared views (M04-14). */
+/** Role-based default views, saved personal/shared views (M04-14) and other modules' ready-made views. */
 export function LeadViewsBar({
   views,
   current,
   savedViews,
+  presets = [],
   counts,
 }: {
   views: LeadView[];
   current: LeadView;
   savedViews: SavedViewRow[];
+  presets?: ListPresetRow[];
   counts?: Partial<Record<LeadView, number>>;
 }) {
   const router = useRouter();
@@ -161,6 +163,21 @@ export function LeadViewsBar({
                 </DropdownMenuItem>
               ))
             )}
+            {presets.length > 0 ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Ready-made</DropdownMenuLabel>
+                {presets.map((preset) => (
+                  <DropdownMenuItem
+                    key={preset.key}
+                    onSelect={() => router.push(`${pathname}?${preset.query}`)}
+                  >
+                    <ListFilter className="size-4 text-muted-foreground" />
+                    {preset.label}
+                  </DropdownMenuItem>
+                ))}
+              </>
+            ) : null}
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => setSaving(true)}>
               <BookmarkPlus /> Save current view…

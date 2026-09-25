@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
 
+import { ChoiceChips } from "@/components/shared/choice-chips";
 import { useFormatters, useRegionalSettings } from "@/components/shared/regional-settings";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -29,10 +30,10 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { actionErrorMessage, type ClientActionError } from "@/lib/action-result";
 import { fromZonedInputValue, toZonedInputValue } from "@/lib/date-range";
+import { LeadStatusExtraFields } from "@/modules/leads/client";
 
 import { activityDialogOptionsAction, logCallAction } from "../actions";
 import { suggestStatusAfterCall } from "../status-rules";
-import { ChoiceChips } from "./choice-chips";
 import { emptyFollowUp, type FollowUpDraft, FollowUpFields } from "./follow-up-fields";
 
 const KEEP = "__keep__";
@@ -62,6 +63,9 @@ export function LogCallDialog({ leadId, trigger }: { leadId: string; trigger?: R
   const [statusKey, setStatusKey] = useState<string>(KEEP);
   const [statusTouched, setStatusTouched] = useState(false);
   const [reason, setReason] = useState("");
+  const [statusDetails, setStatusDetails] = useState<
+    Record<string, string | number | boolean | null>
+  >({});
   const [completeId, setCompleteId] = useState<string | null>(null);
   const [nextKind, setNextKind] = useState<NextKind>("NONE");
   const [next, setNext] = useState<FollowUpDraft>(emptyFollowUp());
@@ -87,6 +91,7 @@ export function LogCallDialog({ leadId, trigger }: { leadId: string; trigger?: R
     setStatusKey(KEEP);
     setStatusTouched(false);
     setReason("");
+    setStatusDetails({});
     const soon = data.openFollowUps.find(
       (followUp) => new Date(followUp.dueAt).getTime() < Date.now() + 12 * 3600 * 1000,
     );
@@ -117,6 +122,7 @@ export function LogCallDialog({ leadId, trigger }: { leadId: string; trigger?: R
       setStatusKey(
         suggested && options.statuses.some((status) => status.key === suggested) ? suggested : KEEP,
       );
+      setStatusDetails({});
     }
     if (options.canManageFollowUps) {
       const kind: NextKind = chosen.requiresNextAction
@@ -161,6 +167,7 @@ export function LogCallDialog({ leadId, trigger }: { leadId: string; trigger?: R
         notes: notes || null,
         statusKey: statusKey === KEEP ? null : statusKey,
         statusReason: reason || null,
+        statusDetails: statusKey === KEEP ? {} : statusDetails,
         completeFollowUpId: completeId,
         next: nextValue,
       },
@@ -364,6 +371,7 @@ export function LogCallDialog({ leadId, trigger }: { leadId: string; trigger?: R
                   onValueChange={(value) => {
                     setStatusKey(value);
                     setStatusTouched(true);
+                    setStatusDetails({});
                   }}
                 >
                   <SelectTrigger id="call-status" className="w-full">
@@ -388,6 +396,25 @@ export function LogCallDialog({ leadId, trigger }: { leadId: string; trigger?: R
                 </Select>
                 {statusKey !== KEEP && !statusTouched ? (
                   <p className="text-xs text-muted-foreground">Suggested from the call outcome.</p>
+                ) : null}
+                {chosenStatus ? (
+                  <LeadStatusExtraFields
+                    target={{
+                      key: chosenStatus.key,
+                      label: chosenStatus.label,
+                      category: chosenStatus.category,
+                      isTerminal: chosenStatus.isTerminal,
+                    }}
+                    current={{
+                      key: options.lead.statusKey,
+                      label: options.lead.statusLabel,
+                      category: options.lead.statusCategory,
+                      isTerminal: options.lead.isTerminal,
+                    }}
+                    details={statusDetails}
+                    onChange={setStatusDetails}
+                    disabled={busy}
+                  />
                 ) : null}
                 {chosenStatus?.requiresReason ? (
                   <Textarea

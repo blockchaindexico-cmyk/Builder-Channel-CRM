@@ -99,6 +99,16 @@ test.describe("smoke", () => {
       "/settings/activities/outcomes",
       "/settings/activities/purposes",
       "/settings/activities/options",
+      // M08
+      "/visits",
+      "/visits?tab=calendar",
+      "/visits?tab=team",
+      "/bookings",
+      "/agenda?tab=visits",
+      "/settings/deals/outcomes",
+      "/settings/deals/reasons",
+      "/settings/deals/stages",
+      "/settings/deals/options",
     ];
     for (const path of paths) {
       await page.goto(path);

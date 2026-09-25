@@ -48,6 +48,12 @@ model Organization {
   callLogs            CallLog[]
   followUpPurposes    FollowUpPurpose[]
   followUps           FollowUp[]
+  // M08
+  visitOutcomes       VisitOutcome[]
+  siteVisits          SiteVisit[]
+  lossReasons         LossReason[]
+  bookingStages       BookingStage[]
+  bookings            Booking[]
 
   @@map("organizations")
 }
@@ -182,6 +188,7 @@ model FileObject {
   builderFiles BuilderFile[]
   leadFiles    LeadFile[]
   callLogs     CallLog[]
+  bookingFiles BookingFile[]
 
   @@unique([organizationId, id])
   @@index([organizationId, purpose, createdAt(sort: Desc)])

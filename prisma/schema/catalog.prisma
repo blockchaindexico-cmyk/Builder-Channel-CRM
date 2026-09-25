@@ -40,6 +40,7 @@ model ConfigurationType {
   updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   configurations ProjectConfiguration[]
+  bookings       Booking[]
 
   @@unique([organizationId, name])
   @@unique([organizationId, id])
@@ -89,9 +90,11 @@ model Builder {
   createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  contacts BuilderContact[]
-  projects Project[]
-  files    BuilderFile[]
+  contacts   BuilderContact[]
+  projects   Project[]
+  files      BuilderFile[]
+  siteVisits SiteVisit[]
+  bookings   Booking[]
 
   @@unique([organizationId, code])
   @@unique([organizationId, id])
@@ -168,6 +171,8 @@ model Project {
   propertyTypes  ProjectPropertyType[]
   files          ProjectFile[]
   leadInterests  LeadProjectInterest[]
+  siteVisits     SiteVisit[]
+  bookings       Booking[]
 
   @@unique([organizationId, code])
   @@unique([organizationId, id])

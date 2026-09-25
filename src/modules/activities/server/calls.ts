@@ -149,6 +149,7 @@ export async function logCall(
       }
       const changed = await setLeadStatusByKey(tx, ctx, lead.id, values.statusKey, reason, {
         workflow: false,
+        details: values.statusDetails,
       });
       if (changed) status = { from: changed.from.label, to: changed.to.label };
     } else if (values.statusKey === undefined && (interactive || settings.autoApplyStatus)) {

@@ -193,7 +193,14 @@ model Lead {
   lastCallOutcome           CallOutcome?     @relation("LeadLastCallOutcome", fields: [organizationId, lastCallOutcomeId], references: [organizationId, id], onDelete: Restrict)
   /// Earliest open follow-up or callback (M07).
   nextFollowUpAt            DateTime?        @map("next_follow_up_at") @db.Timestamptz(3)
+  /// Conversion milestones (M08, for reports): first completed site visit, first booking, closed as won, marked
+  /// lost or not interested. `closedAt`, `lostAt` and `lossReasonId` are cleared when the lead is reopened.
+  firstVisitAt              DateTime?        @map("first_visit_at") @db.Timestamptz(3)
+  bookedAt                  DateTime?        @map("booked_at") @db.Timestamptz(3)
   closedAt                  DateTime?        @map("closed_at") @db.Timestamptz(3)
+  lostAt                    DateTime?        @map("lost_at") @db.Timestamptz(3)
+  lossReasonId              String?          @map("loss_reason_id") @db.Uuid
+  lossReason                LossReason?      @relation(fields: [organizationId, lossReasonId], references: [organizationId, id], onDelete: Restrict)
   /// Future custom fields (validated per organization).
   customFields              Json             @default("{}") @map("custom_fields")
   deletedAt                 DateTime?        @map("deleted_at") @db.Timestamptz(3)
@@ -208,6 +215,8 @@ model Lead {
   assignments   LeadAssignment[]
   calls         CallLog[]
   followUps     FollowUp[]
+  siteVisits    SiteVisit[]
+  bookings      Booking[]
 
   @@unique([organizationId, number])
   @@unique([organizationId, id])
@@ -221,6 +230,7 @@ model Lead {
   @@index([organizationId, duplicateStatus])
   @@index([organizationId, importBatchId])
   @@index([organizationId, nextFollowUpAt])
+  @@index([organizationId, lossReasonId])
   @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "leads_name_trgm_idx")
   @@index([mobileNormalized(ops: raw("gin_trgm_ops"))], type: Gin, map: "leads_mobile_trgm_idx")
   @@index([emailNormalized(ops: raw("gin_trgm_ops"))], type: Gin, map: "leads_email_trgm_idx")
