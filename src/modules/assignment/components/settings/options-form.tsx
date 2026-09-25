@@ -18,15 +18,16 @@ import type { AssignmentSettings } from "../../schemas";
 export function AssignmentOptionsForm({ settings }: { settings: AssignmentSettings }) {
   const router = useRouter();
   const [assignCreator, setAssignCreator] = useState(settings.assignCreator);
-  const [hours, setHours] = useState(String(settings.unworkedHours));
   const [busy, setBusy] = useState(false);
 
-  async function save() {
+  // The hours field is read on submit, so a value typed before the page finished loading is not lost.
+  async function save(form: FormData) {
+    const unworkedHours = Number(form.get("unworkedHours"));
+    if (!Number.isInteger(unworkedHours) || unworkedHours < 1 || unworkedHours > 720) {
+      return void toast.error("Enter a number of hours between 1 and 720.");
+    }
     setBusy(true);
-    const result = await saveAssignmentSettingsAction({
-      assignCreator,
-      unworkedHours: Number(hours),
-    });
+    const result = await saveAssignmentSettingsAction({ assignCreator, unworkedHours });
     setBusy(false);
     const error = actionErrorMessage(result);
     if (error) return void toast.error(error);
@@ -47,7 +48,7 @@ export function AssignmentOptionsForm({ settings }: { settings: AssignmentSettin
           className="space-y-6"
           onSubmit={(event) => {
             event.preventDefault();
-            void save();
+            void save(new FormData(event.currentTarget));
           }}
         >
           <div className="flex items-start gap-3">
@@ -68,18 +69,19 @@ export function AssignmentOptionsForm({ settings }: { settings: AssignmentSettin
             <Label htmlFor="unworked-hours">A lead is unworked after (hours)</Label>
             <Input
               id="unworked-hours"
+              name="unworkedHours"
               type="number"
               min={1}
               max={720}
-              value={hours}
-              onChange={(event) => setHours(event.target.value)}
+              required
+              defaultValue={settings.unworkedHours}
             />
             <p className="text-sm text-muted-foreground">
               Counted from its assignment, as long as nothing was logged on it. Shown on the team
               workload board and used to flag the unassigned queue.
             </p>
           </div>
-          <Button type="submit" disabled={busy || !(Number(hours) >= 1 && Number(hours) <= 720)}>
+          <Button type="submit" disabled={busy}>
             {busy ? "Saving…" : "Save options"}
           </Button>
         </form>
