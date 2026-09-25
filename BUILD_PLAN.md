@@ -639,21 +639,21 @@ manage the configurable lifecycle, detect duplicates, and show a complete, attri
 - [x] **M04-12** Lead list: server-side pagination and sorting; search by name, mobile (any format), email, lead number.
 - [x] **M04-13** Filters: builder, project, status, status category, source, campaign, owner, manager/team, date ranges (created / updated / last activity), temperature, tags — all in the URL.
 - [x] **M04-14** Views: role defaults (My Leads, Team Leads, All Leads, Unassigned, Duplicates) + saved personal/shared views + column chooser.
-- [ ] **M04-15** Bulk-action framework (select rows → action) with bulk status change and export; M05 adds bulk assign.
+- [x] **M04-15** Bulk-action framework (select rows → action) with bulk status change and export; M05 adds bulk assign.
 
 *Duplicates*
-- [ ] **M04-16** Duplicate detection on create, import and API using the organization's policy.
+- [x] **M04-16** Duplicate detection on create, import and API using the organization's policy.
 - [x] **M04-17** Duplicate review queue, mark-as-duplicate (linked to original), basic merge (moves notes, interests, activities, files; secondary marked merged).
 
 *Import, export & intake*
-- [ ] **M04-18** CSV/XLSX import: upload → column mapping → validation preview → background job → result report with error rows; import history.
-- [ ] **M04-19** Lead export (CSV/XLSX) respecting data scope; `leads.export` permission; audited.
-- [ ] **M04-20** Lead intake API `POST /api/v1/leads` (API-key auth, Zod validation, idempotency key, rate limiting, source/campaign mapping) + API key management (create, show once, revoke) + API docs page.
+- [x] **M04-18** CSV/XLSX import: upload → column mapping → validation preview → background job → result report with error rows; import history.
+- [x] **M04-19** Lead export (CSV/XLSX) respecting data scope; `leads.export` permission; audited.
+- [x] **M04-20** Lead intake API `POST /api/v1/leads` (API-key auth, Zod validation, idempotency key, rate limiting, source/campaign mapping) + API key management (create, show once, revoke) + API docs page.
 
 *Permissions, events & tests*
 - [x] **M04-21** Permissions (`leads.view|create|update|change_status|reopen|delete|import|export|merge`, `lead_masters.manage`, `api_keys.manage`) with data scope applied in every query.
-- [ ] **M04-22** Domain events: `lead.created`, `lead.updated`, `lead.status_changed`, `lead.note_added`, `lead.duplicate_detected`, `lead.merged`, `lead.import_completed`.
-- [ ] **M04-23** Tests: duplicate policies, scope filtering per role, status rules, timeline completeness, import (valid/invalid rows), intake API auth & idempotency, phone-format search.
+- [x] **M04-22** Domain events: `lead.created`, `lead.updated`, `lead.status_changed`, `lead.note_added`, `lead.duplicate_detected`, `lead.merged`, `lead.import_completed`.
+- [x] **M04-23** Tests: duplicate policies, scope filtering per role, status rules, timeline completeness, import (valid/invalid rows), intake API auth & idempotency, phone-format search.
 
 **Acceptance criteria**
 - A lead can be created manually, via import and via the intake API; each gets a unique number and a full timeline.

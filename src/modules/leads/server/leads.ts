@@ -28,7 +28,13 @@ import {
   updateLeadSchema,
   type UpdateLeadValues,
 } from "../schemas";
-import { leadNumberSearch, mobileSearchDigits, normalizeEmail, normalizeMobile } from "./normalize";
+import {
+  contactNumberErrors,
+  leadNumberSearch,
+  mobileSearchDigits,
+  normalizeEmail,
+  normalizeMobile,
+} from "./normalize";
 import { findVisibleLead, isLeadInScope, leadScopeWhere } from "./scope";
 import { getLeadSettings } from "./settings";
 import { recordLeadActivity } from "./timeline";
@@ -120,6 +126,14 @@ export async function findDuplicateLeads(
 
 async function organizationCountry(ctx: ServiceContext): Promise<string> {
   return (await getRegionalSettings(ctx)).country;
+}
+
+function assertValidNumbers(
+  values: { mobile?: string | null; alternateMobile?: string | null },
+  country: string,
+): void {
+  const errors = contactNumberErrors(values, country);
+  if (Object.keys(errors).length) throw new ValidationError("Enter a valid mobile number.", errors);
 }
 
 function normalizeContact(
@@ -330,6 +344,10 @@ export interface CreateLeadOptions {
   duplicatePolicyOverride?: "FLAG" | "BLOCK" | "ALLOW";
   /** Extra timeline payload, e.g. the import batch. */
   origin?: Record<string, unknown>;
+  /** Import that creates the lead (M04-18). */
+  importBatchId?: string;
+  /** Runs inside the creating transaction, e.g. to count the row of an import exactly once. */
+  onCreated?: (tx: TenantDbOrTx, lead: CreatedLead) => Promise<void>;
 }
 
 export interface CreatedLead {
@@ -353,6 +371,7 @@ export async function createLead(
   ctx.permissions.assert(LEAD_PERMISSIONS.create);
   const values: CreateLeadValues = parseInput(createLeadSchema, input);
   const country = await organizationCountry(ctx);
+  assertValidNumbers(values, country);
   const contact = normalizeContact(values, country);
   const settings = await getLeadSettings(ctx.db, ctx);
   const policy = options.duplicatePolicyOverride ?? settings.duplicatePolicy;
@@ -393,6 +412,7 @@ export async function createLead(
         number,
         ...leadData(values, contact, sourceId),
         channel,
+        importBatchId: options.importBatchId ?? null,
         statusId: status.id,
         ownerId,
         createdById,
@@ -427,7 +447,12 @@ export async function createLead(
       include: snapshotInclude,
     });
     const snapshot = await historySnapshot(tx, full);
-    const via = channel === "IMPORT" ? "import" : channel === "API" ? "the intake API" : "manually";
+    const via =
+      channel === "IMPORT"
+        ? "from an import"
+        : channel === "API"
+          ? "via the intake API"
+          : "manually";
     await recordLeadActivity(tx, ctx, {
       leadId: lead.id,
       type: LEAD_ACTIVITY_TYPES.CREATED,
@@ -488,12 +513,14 @@ export async function createLead(
       sourceId,
       projectIds: values.interests.map((interest) => interest.projectId),
     });
-    return {
+    const created: CreatedLead = {
       id: lead.id,
       number,
       duplicateOf,
       duplicateStatus: duplicateOf ? "SUSPECTED" : "NONE",
     };
+    await options.onCreated?.(tx, created);
+    return created;
   });
 }
 
@@ -506,6 +533,7 @@ export async function updateLead(
 ): Promise<{ changed: string[] }> {
   const values = parseInput(updateLeadSchema, input);
   const country = await organizationCountry(ctx);
+  assertValidNumbers(values, country);
   const contact = normalizeContact(values, country);
   const settings = await getLeadSettings(ctx.db, ctx);
 
@@ -757,6 +785,8 @@ export interface LeadFilters {
   teamOf?: string | null;
   temperature?: string | null;
   tag?: string | null;
+  /** Leads created by one import (M04-18). */
+  importBatchId?: string | null;
   created?: DateRange | null;
   updated?: DateRange | null;
   lastActivity?: DateRange | null;
@@ -844,6 +874,8 @@ export async function buildLeadWhere(
     and.push({ temperature: filters.temperature as "HOT" });
   }
   if (filters.tag) and.push({ tags: { has: filters.tag } });
+  const importBatchId = uuidOrNull(filters.importBatchId);
+  if (importBatchId) and.push({ importBatchId });
   if (filters.created) and.push({ createdAt: toUtcBounds(filters.created, filters.timezone) });
   if (filters.updated) and.push({ updatedAt: toUtcBounds(filters.updated, filters.timezone) });
   if (filters.lastActivity)
@@ -946,6 +978,7 @@ export async function getLeadListOptions(ctx: ServiceContext) {
         : ["my"];
   return { owners, managers, views, scope: scope.scope };
 }
+export type LeadListOptions = Awaited<ReturnType<typeof getLeadListOptions>>;
 
 // --- Delete ---------------------------------------------------------------------------------------------------------
 

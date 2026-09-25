@@ -554,7 +554,16 @@ export async function assertCanViewMember(
 export async function listMemberOptions(
   ctx: ServiceContext,
   options: { ids?: readonly string[]; managersOnly?: boolean; includeInactive?: boolean } = {},
-): Promise<{ membershipId: string; name: string; roleName: string; status: MembershipStatus }[]> {
+): Promise<
+  {
+    membershipId: string;
+    name: string;
+    email: string;
+    employeeCode: string | null;
+    roleName: string;
+    status: MembershipStatus;
+  }[]
+> {
   const where: Prisma.MembershipWhereInput = {};
   if (options.ids) where.id = { in: [...options.ids] };
   if (!options.includeInactive) where.status = { not: "INACTIVE" };
@@ -565,13 +574,16 @@ export async function listMemberOptions(
     select: {
       id: true,
       status: true,
-      user: { select: { name: true } },
+      employeeCode: true,
+      user: { select: { name: true, email: true } },
       role: { select: { name: true } },
     },
   });
   return members.map((member) => ({
     membershipId: member.id,
     name: member.user.name,
+    email: member.user.email,
+    employeeCode: member.employeeCode,
     roleName: member.role.name,
     status: member.status,
   }));

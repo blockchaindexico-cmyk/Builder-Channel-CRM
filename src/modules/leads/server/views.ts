@@ -22,6 +22,7 @@ const VIEW_PARAMS = new Set([
   "project",
   "temperature",
   "tag",
+  "import",
   "createdFrom",
   "createdTo",
   "activityFrom",

@@ -32,7 +32,8 @@ const ORGANIZATION_MODEL = Prisma.ModelName.Organization;
  * Global (non-tenant) models reachable through a tenant client:
  * - `User`: visible only if the user is a member of the current organization (rule T5).
  * - `Session`: only sessions working in the current organization.
- * - Auth internals (`Account`, `Verification`, `RateLimit`) are never available to feature code.
+ * - Auth internals (`Account`, `Verification`, `RateLimit`) and the public API's rate-limit windows are never
+ *   available to feature code.
  */
 const MEMBER_SCOPED_MODELS = new Set<string>([Prisma.ModelName.User]);
 const SESSION_MODEL = Prisma.ModelName.Session;
@@ -40,6 +41,7 @@ const BLOCKED_MODELS = new Set<string>([
   Prisma.ModelName.Account,
   Prisma.ModelName.Verification,
   Prisma.ModelName.RateLimit,
+  Prisma.ModelName.RateLimitWindow,
 ]);
 
 const WHERE_OPERATIONS = new Set([

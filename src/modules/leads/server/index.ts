@@ -9,13 +9,15 @@ import {
   IMPORT_MAX_BYTES,
   IMPORT_TYPES,
   LEAD_ATTACHMENT_PURPOSE,
-  LEAD_EXPORT_PURPOSE,
   LEAD_IMPORT_PURPOSE,
+  LEAD_IMPORT_REPORT_PURPOSE,
 } from "../schemas";
 import { canReadLeadAttachment } from "./files";
+import { leadImportJob } from "./jobs";
 
 export const leadsServerModule: ServerModule = {
   key: "leads",
+  jobs: [leadImportJob],
   filePurposes: [
     {
       key: LEAD_ATTACHMENT_PURPOSE,
@@ -34,15 +36,12 @@ export const leadsServerModule: ServerModule = {
       canRead: (ctx) => ctx.permissions.has(LEAD_PERMISSIONS.import),
     },
     {
-      key: LEAD_EXPORT_PURPOSE,
-      label: "lead exports",
-      maxBytes: 100 * 1024 * 1024,
-      allowedTypes: [
-        "text/csv",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      ],
-      uploadPermission: LEAD_PERMISSIONS.export,
-      canRead: (ctx) => ctx.permissions.has(LEAD_PERMISSIONS.export),
+      key: LEAD_IMPORT_REPORT_PURPOSE,
+      label: "lead import error reports",
+      maxBytes: 50 * 1024 * 1024,
+      allowedTypes: ["text/csv"],
+      uploadPermission: LEAD_PERMISSIONS.import,
+      canRead: (ctx) => ctx.permissions.has(LEAD_PERMISSIONS.import),
     },
   ],
   // Catalogue records used by leads cannot be deleted, only deactivated (M03-11).

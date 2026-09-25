@@ -29,6 +29,7 @@ import { STATUS_CATEGORIES, TEMPERATURES } from "../constants";
 import type { LeadRow } from "../server/leads";
 import type { LeadStatusRow } from "../server/masters";
 import { LeadStatusBadge, TemperatureBadge } from "./badges";
+import { ExportSelectedButton } from "./export-button";
 import { StatusDialog, type StatusPermissions } from "./status-dialog";
 
 const ALL = "__all__";
@@ -54,6 +55,7 @@ const filterParsers = {
   builder: parseAsString,
   temperature: parseAsString,
   tag: parseAsString,
+  import: parseAsString,
   createdFrom: parseAsString,
   createdTo: parseAsString,
   activityFrom: parseAsString,
@@ -99,16 +101,18 @@ export function LeadsTable({
   total,
   options,
   canBulkStatus,
+  canExport = false,
   statusPermissions,
-  bulkExtra,
+  importBatch,
 }: {
   rows: LeadRow[];
   total: number;
   options: LeadListOptions;
   canBulkStatus: boolean;
+  canExport?: boolean;
   statusPermissions: StatusPermissions;
-  /** Extra bulk actions from the page (e.g. export selected). */
-  bulkExtra?: (selected: LeadRow[]) => ReactNode;
+  /** The import the list is filtered by (`?import=`), for its filter chip. */
+  importBatch?: { id: string; fileName: string } | null;
 }) {
   const format = useFormatters();
   const [, startTransition] = useTransition();
@@ -170,6 +174,9 @@ export function LeadsTable({
     });
   if (filters.tag) active.push({ key: "tag", label: `Tag: ${filters.tag}` });
   const moreCount = active.length + (filters.createdFrom ? 1 : 0) + (filters.activityFrom ? 1 : 0);
+  if (filters.import) {
+    active.push({ key: "import", label: `Import: ${importBatch?.fileName ?? "unknown file"}` });
+  }
 
   const columns: ColumnDef<LeadRow, unknown>[] = [
     {
@@ -300,7 +307,7 @@ export function LeadsTable({
       getRowId={(row) => row.id}
       persistColumnsInUrl
       initiallyHiddenColumns={["location", "temperature"]}
-      enableRowSelection={canBulkStatus || Boolean(bulkExtra)}
+      enableRowSelection={canBulkStatus || canExport}
       bulkActions={(selected, clear) => (
         <>
           {canBulkStatus ? (
@@ -316,7 +323,7 @@ export function LeadsTable({
               }
             />
           ) : null}
-          {bulkExtra?.(selected)}
+          {canExport ? <ExportSelectedButton ids={selected.map((row) => row.id)} /> : null}
           <Button size="sm" variant="ghost" onClick={clear}>
             Clear selection
           </Button>

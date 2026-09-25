@@ -9,3 +9,5 @@ overrides:
   # Security: transitive dependencies of the Prisma CLI flagged by `pnpm audit` (see PROGRESS.md KI-003).
   mysql2: ">=3.23.1"
   deepmerge-ts: ">=8.0.0"
+  # Security: exceljs pins uuid 8 (GHSA-w5hq-g745-h8pq); 11.1.1+ keeps the CommonJS `v4` export it uses.
+  exceljs>uuid: ">=11.1.1 <12"

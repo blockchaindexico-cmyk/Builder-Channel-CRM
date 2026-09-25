@@ -132,6 +132,18 @@ docker run --rm --env-file prod.env crm-migrate pnpm db:seed
 See [`docs/runbooks/deployment.md`](./docs/runbooks/deployment.md) for environment variables, rollout order and
 scaling notes.
 
+## Lead intake API
+
+Websites, landing pages and portals can create leads with `POST /api/v1/leads` and an API key. Create keys and read
+the documentation (fields, responses, idempotency, rate limits and your source codes) under **Settings → API keys**;
+the design is described in [ADR 0005](./docs/adr/0005-public-api.md).
+
+```bash
+curl -X POST http://localhost:3000/api/v1/leads \
+  -H "Authorization: Bearer crm_xxxxxxxx_..." -H "Content-Type: application/json" \
+  -d '{"name": "Priya Sharma", "mobile": "+91 98200 12345", "source": "website"}'
+```
+
 ## Build modules
 
 | # | Module | Status |
@@ -139,7 +151,7 @@ scaling notes.
 | M01 | Project Foundation & Platform Core | Done |
 | M02 | Identity, Access Control & Team Structure | Done |
 | M03 | Builder & Project Management | Done |
-| M04 | Lead Management Core | In progress |
+| M04 | Lead Management Core | Done |
 | M05 | Lead Assignment, Reassignment & Team Workload | Planned |
 | M06 | Notifications & Reminders Engine | Planned |
 | M07 | Calls, Follow-ups & Callbacks | Planned |

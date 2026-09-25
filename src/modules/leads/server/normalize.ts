@@ -12,6 +12,21 @@ export function normalizeMobile(value: string | null | undefined, country: strin
   return digits.length >= 6 ? digits : null;
 }
 
+/** Field errors for numbers that cannot be phone numbers (fewer than 6 digits), keyed like the lead form. */
+export function contactNumberErrors(
+  values: { mobile?: string | null; alternateMobile?: string | null },
+  country: string,
+): Record<string, string[]> {
+  const errors: Record<string, string[]> = {};
+  if (values.mobile?.trim() && !normalizeMobile(values.mobile, country)) {
+    errors.mobile = ["Enter a valid mobile number"];
+  }
+  if (values.alternateMobile?.trim() && !normalizeMobile(values.alternateMobile, country)) {
+    errors.alternateMobile = ["Enter a valid mobile number"];
+  }
+  return errors;
+}
+
 export function normalizeEmail(value: string | null | undefined): string | null {
   const trimmed = value?.trim().toLowerCase();
   return trimmed ? trimmed : null;

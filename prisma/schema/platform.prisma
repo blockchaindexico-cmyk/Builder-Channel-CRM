@@ -195,3 +195,46 @@ model RateLimitWindow {
 
   @@map("rate_limit_windows")
 }
+
+/// Key for the public API `/api/v1` (M04-20, first used by lead intake). Only a SHA-256 hash is stored; the key is
+/// shown once.
+model ApiKey {
+  id              String       @id @default(uuid(7)) @db.Uuid
+  organizationId  String       @map("organization_id") @db.Uuid
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name            String
+  /// First characters of the key, shown to recognise it (e.g. "crm_7f3a9c1d").
+  prefix          String
+  hashedKey       String       @unique @map("hashed_key")
+  /// Lead source applied when a request does not name one.
+  defaultSourceId String?      @map("default_source_id") @db.Uuid
+  lastUsedAt      DateTime?    @map("last_used_at") @db.Timestamptz(3)
+  revokedAt       DateTime?    @map("revoked_at") @db.Timestamptz(3)
+  createdById     String?      @map("created_by_id") @db.Uuid
+  createdByName   String       @map("created_by_name")
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  idempotencyKeys ApiIdempotencyKey[]
+
+  @@unique([organizationId, id])
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@map("api_keys")
+}
+
+/// Stored responses for `Idempotency-Key` retries (kept 24 hours).
+model ApiIdempotencyKey {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  apiKeyId       String   @map("api_key_id") @db.Uuid
+  apiKey         ApiKey   @relation(fields: [organizationId, apiKeyId], references: [organizationId, id], onDelete: Cascade)
+  key            String
+  requestHash    String   @map("request_hash")
+  /// Null while the first request with this key is still being processed.
+  statusCode     Int?     @map("status_code")
+  response       Json?
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@unique([apiKeyId, key])
+  @@index([createdAt])
+  @@map("api_idempotency_keys")
+}

@@ -53,6 +53,14 @@ containers directly to the internet.
    the system roles (existing admin edits are kept).
 5. Watch logs for `level >= 50` (error) for 15 minutes.
 
+## Public API
+
+`/api/v1` (lead intake) is reachable without a session and authenticates with API keys created under Settings → API
+keys. It is rate limited per key (60 requests/minute) and per client address for failed authentications, using the
+database — no extra infrastructure. Expose it through the same reverse proxy; restrict it further there if only known
+partner addresses should reach it. Lead imports and API housekeeping run in the worker, so keep at least one worker
+instance running.
+
 ## Rollback
 
 Redeploy the previous images. Only roll back migrations with a prepared down-migration; prefer forward fixes.

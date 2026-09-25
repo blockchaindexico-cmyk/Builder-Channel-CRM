@@ -155,6 +155,9 @@ model Lead {
   /// Portal listing, referrer name or other source detail.
   subSource                 String?          @map("sub_source")
   channel                   LeadChannel      @default(MANUAL)
+  /// Import that created the lead (M04-18).
+  importBatchId             String?          @map("import_batch_id") @db.Uuid
+  importBatch               LeadImportBatch? @relation(fields: [organizationId, importBatchId], references: [organizationId, id], onDelete: Restrict)
   statusId                  String           @map("status_id") @db.Uuid
   status                    LeadStatus       @relation(fields: [organizationId, statusId], references: [organizationId, id], onDelete: Restrict)
   /// Membership owning the lead (null = unassigned). Assignment rules arrive with M05.
@@ -203,6 +206,7 @@ model Lead {
   @@index([organizationId, alternateMobileNormalized])
   @@index([organizationId, emailNormalized])
   @@index([organizationId, duplicateStatus])
+  @@index([organizationId, importBatchId])
   @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "leads_name_trgm_idx")
   @@index([mobileNormalized(ops: raw("gin_trgm_ops"))], type: Gin, map: "leads_mobile_trgm_idx")
   @@index([emailNormalized(ops: raw("gin_trgm_ops"))], type: Gin, map: "leads_email_trgm_idx")
@@ -344,11 +348,13 @@ model LeadImportBatch {
   mapping        Json
   options        Json         @default("{}")
   totalRows      Int          @default(0) @map("total_rows")
+  /// Rows handled so far; a retried job resumes after this row.
+  processedRows  Int          @default(0) @map("processed_rows")
   importedRows   Int          @default(0) @map("imported_rows")
   duplicateRows  Int          @default(0) @map("duplicate_rows")
   skippedRows    Int          @default(0) @map("skipped_rows")
   errorRows      Int          @default(0) @map("error_rows")
-  /// First 500 row errors: [{ row, message }].
+  /// Rows that were not imported: [{ row, message, skipped? }] (at most one entry per row).
   errors         Json         @default("[]")
   errorFileId    String?      @map("error_file_id") @db.Uuid
   createdById    String       @map("created_by_id") @db.Uuid
@@ -357,47 +363,9 @@ model LeadImportBatch {
   completedAt    DateTime?    @map("completed_at") @db.Timestamptz(3)
   createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  @@index([organizationId, createdAt(sort: Desc)])
-  @@map("lead_import_batches")
-}
-
-/// Key for the lead intake API (M04-20). Only a SHA-256 hash is stored; the key is shown once.
-model ApiKey {
-  id              String       @id @default(uuid(7)) @db.Uuid
-  organizationId  String       @map("organization_id") @db.Uuid
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  name            String
-  /// First characters of the key, shown to recognise it (e.g. "crm_7f3a9c1d").
-  prefix          String
-  hashedKey       String       @unique @map("hashed_key")
-  /// Lead source applied when a request does not name one.
-  defaultSourceId String?      @map("default_source_id") @db.Uuid
-  lastUsedAt      DateTime?    @map("last_used_at") @db.Timestamptz(3)
-  revokedAt       DateTime?    @map("revoked_at") @db.Timestamptz(3)
-  createdById     String?      @map("created_by_id") @db.Uuid
-  createdByName   String       @map("created_by_name")
-  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
-
-  idempotencyKeys ApiIdempotencyKey[]
+  leads Lead[]
 
   @@unique([organizationId, id])
   @@index([organizationId, createdAt(sort: Desc)])
-  @@map("api_keys")
-}
-
-/// Stored responses for `Idempotency-Key` retries (kept 24 hours).
-model ApiIdempotencyKey {
-  id             String   @id @default(uuid(7)) @db.Uuid
-  organizationId String   @map("organization_id") @db.Uuid
-  apiKeyId       String   @map("api_key_id") @db.Uuid
-  apiKey         ApiKey   @relation(fields: [organizationId, apiKeyId], references: [organizationId, id], onDelete: Cascade)
-  key            String
-  requestHash    String   @map("request_hash")
-  statusCode     Int      @map("status_code")
-  response       Json
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-
-  @@unique([apiKeyId, key])
-  @@index([createdAt])
-  @@map("api_idempotency_keys")
+  @@map("lead_import_batches")
 }

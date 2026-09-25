@@ -23,6 +23,7 @@ declare module "@/platform/events/types" {
       batchId: string;
       imported: number;
       duplicates: number;
+      skipped: number;
       errors: number;
     };
   }

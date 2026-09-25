@@ -7,20 +7,25 @@ import { tenantAction } from "@/platform/actions/client";
 
 import { LEAD_PERMISSIONS } from "./permissions";
 import {
+  apiKeySchema,
   type campaignSchema,
   changeStatusSchema,
   createLeadSchema,
   duplicateCheckSchema,
+  importRequestSchema,
   leadSettingsSchema,
   leadSourceSchema,
   leadStatusSchema,
   noteSchema,
   requestAttachmentSchema,
+  requestImportUploadSchema,
   savedViewSchema,
   updateLeadSchema,
 } from "./schemas";
+import * as apiKeys from "./server/api-keys";
 import * as duplicates from "./server/duplicates";
 import * as files from "./server/files";
+import * as importer from "./server/import/service";
 import * as leads from "./server/leads";
 import * as masters from "./server/masters";
 import * as notes from "./server/notes";
@@ -293,6 +298,60 @@ export const saveLeadSettingsAction = tenantAction
     const result = await settings.updateLeadSettings(ctx.service, parsedInput);
     revalidatePath("/settings/leads", "layout");
     return result;
+  });
+
+// --- Import (M04-18) ---------------------------------------------------------------------------------------------
+
+export const requestImportUploadAction = tenantAction
+  .metadata({ name: "leads.import.requestUpload", permission: LEAD_PERMISSIONS.import })
+  .inputSchema(requestImportUploadSchema)
+  .action(async ({ parsedInput, ctx }) => importer.requestImportUpload(ctx.service, parsedInput));
+
+export const analyzeImportAction = tenantAction
+  .metadata({ name: "leads.import.analyze", permission: LEAD_PERMISSIONS.import })
+  .inputSchema(z.object({ fileId: z.uuid() }))
+  .action(async ({ parsedInput, ctx }) =>
+    importer.analyzeImportFile(ctx.service, parsedInput.fileId),
+  );
+
+export const previewImportAction = tenantAction
+  .metadata({ name: "leads.import.preview", permission: LEAD_PERMISSIONS.import })
+  .inputSchema(importRequestSchema)
+  .action(async ({ parsedInput, ctx }) => importer.previewImport(ctx.service, parsedInput));
+
+export const startImportAction = tenantAction
+  .metadata({ name: "leads.import.start", permission: LEAD_PERMISSIONS.import })
+  .inputSchema(importRequestSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const result = await importer.startImport(ctx.service, parsedInput);
+    revalidatePath("/leads/import");
+    return result;
+  });
+
+export const importFileUrlAction = tenantAction
+  .metadata({ name: "leads.import.fileUrl", permission: LEAD_PERMISSIONS.import })
+  .inputSchema(z.object({ batchId: z.uuid(), which: z.enum(["original", "errors"]) }))
+  .action(async ({ parsedInput, ctx }) => ({
+    url: await importer.getImportFileUrl(ctx.service, parsedInput.batchId, parsedInput.which),
+  }));
+
+// --- API keys (M04-20) ------------------------------------------------------------------------------------------
+
+export const createApiKeyAction = tenantAction
+  .metadata({ name: "leads.apiKeys.create", permission: LEAD_PERMISSIONS.apiKeysManage })
+  .inputSchema(apiKeySchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const result = await apiKeys.createApiKey(ctx.service, parsedInput);
+    revalidatePath("/settings/api-keys");
+    return result;
+  });
+
+export const revokeApiKeyAction = tenantAction
+  .metadata({ name: "leads.apiKeys.revoke", permission: LEAD_PERMISSIONS.apiKeysManage })
+  .inputSchema(z.object({ keyId: z.uuid() }))
+  .action(async ({ parsedInput, ctx }) => {
+    await apiKeys.revokeApiKey(ctx.service, parsedInput.keyId);
+    revalidatePath("/settings/api-keys");
   });
 
 // Re-exported for campaign form typing.

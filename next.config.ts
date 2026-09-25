@@ -25,6 +25,8 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Produces a self-contained server bundle for the Docker image (M01-27).
   output: "standalone",
+  // Loaded from node_modules at runtime instead of being bundled (large CommonJS library for XLSX files).
+  serverExternalPackages: ["exceljs"],
   experimental: {
     // Enables forbidden()/unauthorized() with forbidden.tsx / unauthorized.tsx boundaries.
     authInterrupts: true,

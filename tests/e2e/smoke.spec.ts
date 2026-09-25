@@ -77,6 +77,9 @@ test.describe("smoke", () => {
       "/settings/leads/sources",
       "/settings/leads/campaigns",
       "/settings/leads/duplicates",
+      "/leads/import",
+      "/leads/import/new",
+      "/settings/api-keys",
     ];
     for (const path of paths) {
       await page.goto(path);

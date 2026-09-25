@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { IDEMPOTENCY_TTL_MS } from "@/platform/api/idempotency";
 import { prisma } from "@/platform/db/client";
 import { EMAIL_SEND_JOB } from "@/platform/email/constants";
 import { getEmailTransport } from "@/platform/email/transport";
@@ -72,7 +73,27 @@ const cleanupPendingUploadsJob = defineJob({
   },
 });
 
+/** Drops expired idempotency records and finished rate-limit windows of the public API (hourly). */
+const cleanupApiStateJob = defineJob({
+  name: "platform.api.cleanup",
+  description: "Delete idempotency records older than 24 hours and stale rate-limit windows",
+  cron: { expression: "40 * * * *" },
+  async handler(_data, job) {
+    const now = Date.now();
+    const idempotency = await prisma.apiIdempotencyKey.deleteMany({
+      where: { createdAt: { lt: new Date(now - IDEMPOTENCY_TTL_MS) } },
+    });
+    const windows = await prisma.rateLimitWindow.deleteMany({
+      where: { windowStart: { lt: new Date(now - 24 * 3600 * 1000) } },
+    });
+    job.logger.info(
+      { idempotency: idempotency.count, rateLimitWindows: windows.count },
+      "cleaned up public API state",
+    );
+  },
+});
+
 export const platformServerModule: ServerModule = {
   key: "platform",
-  jobs: [sendEmailJob, pruneOutboxJob, cleanupPendingUploadsJob],
+  jobs: [sendEmailJob, pruneOutboxJob, cleanupPendingUploadsJob, cleanupApiStateJob],
 };
