@@ -134,7 +134,10 @@ export interface ProjectPerformance {
   cancellations: number;
 }
 
-/** Visits, bookings and closures per project in the period (M10-06 builder- and project-wise overview). */
+/**
+ * Visits, bookings and closures per project in the period (M10-06 builder- and project-wise overview): three grouped
+ * queries (interested leads, visits, bookings) merged per project.
+ */
 export async function getProjectPerformance(
   ctx: ServiceContext,
   filters: ReportFilters,
@@ -147,55 +150,104 @@ export async function getProjectPerformance(
   const byMember = (column: Prisma.Sql) =>
     members ? Prisma.sql`${column} = ANY(${members}::uuid[])` : Prisma.sql`TRUE`;
   const dims = dimensionsOf(filters);
-  const projectFilter = Prisma.sql`${dims.projectId ? Prisma.sql`AND p."id" = ${dims.projectId}::uuid` : Prisma.empty}
-    ${dims.builderId ? Prisma.sql`AND p."builder_id" = ${dims.builderId}::uuid` : Prisma.empty}`;
+  const projectFilter = (alias: string) => {
+    const table = Prisma.raw(alias);
+    return Prisma.sql`${dims.projectId ? Prisma.sql`AND ${table}."project_id" = ${dims.projectId}::uuid` : Prisma.empty}
+      ${dims.builderId ? Prisma.sql`AND ${table}."builder_id" = ${dims.builderId}::uuid` : Prisma.empty}`;
+  };
   const { where: leadWhere } = await leadBase(
     ctx,
     { ...filters, projectId: null, builderId: null },
     resolved,
   );
-  const rows = await ctx.db.$queryRaw<
-    (Omit<ProjectPerformance, "projectName" | "builderName"> & {
-      project_name: string;
-      builder_name: string;
-    })[]
-  >`
-    SELECT p."id" AS "projectId", p."name" AS project_name, b."id" AS "builderId", b."name" AS builder_name,
-      (SELECT COUNT(DISTINCT l."id")::int FROM "leads" l JOIN "lead_project_interests" i
-         ON i."organization_id" = l."organization_id" AND i."lead_id" = l."id" AND i."project_id" = p."id"
-       WHERE ${leadWhere}) AS "interestedLeads",
-      (SELECT COUNT(*)::int FROM "site_visits" v WHERE v."organization_id" = ${org} AND v."project_id" = p."id"
-         AND v."status" = 'COMPLETED' AND NOT v."is_revisit" AND v."completed_at" >= ${start} AND v."completed_at" < ${end}
-         AND ${byMember(Prisma.sql`v."assigned_to_id"`)}) AS "visits",
-      (SELECT COUNT(*)::int FROM "site_visits" v WHERE v."organization_id" = ${org} AND v."project_id" = p."id"
-         AND v."status" = 'COMPLETED' AND v."is_revisit" AND v."completed_at" >= ${start} AND v."completed_at" < ${end}
-         AND ${byMember(Prisma.sql`v."assigned_to_id"`)}) AS "revisits",
-      (SELECT COUNT(*)::int FROM "bookings" bk WHERE bk."organization_id" = ${org} AND bk."project_id" = p."id"
-         AND bk."booking_date" >= ${filters.range.from}::date AND bk."booking_date" <= ${filters.range.to}::date
-         AND ${byMember(Prisma.sql`bk."executive_id"`)}) AS "bookings",
-      (SELECT COUNT(*)::int FROM "bookings" bk WHERE bk."organization_id" = ${org} AND bk."project_id" = p."id"
-         AND bk."status" = 'CLOSED_WON' AND bk."closed_at" >= ${start} AND bk."closed_at" < ${end}
-         AND ${byMember(Prisma.sql`bk."executive_id"`)}) AS "closures",
-      (SELECT COUNT(*)::int FROM "bookings" bk WHERE bk."organization_id" = ${org} AND bk."project_id" = p."id"
-         AND bk."status" = 'CANCELLED' AND bk."cancelled_at" >= ${start} AND bk."cancelled_at" < ${end}
-         AND ${byMember(Prisma.sql`bk."executive_id"`)}) AS "cancellations"
-    FROM "projects" p
-    JOIN "builders" b ON b."organization_id" = p."organization_id" AND b."id" = p."builder_id"
-    WHERE p."organization_id" = ${org} ${projectFilter}`;
-  return rows
-    .map(({ project_name, builder_name, ...row }) => ({
-      ...row,
-      projectName: project_name,
-      builderName: builder_name,
-    }))
+  const [interested, visits, bookings, projects] = await Promise.all([
+    ctx.db.$queryRaw<{ project_id: string; count: number }[]>`
+      SELECT i."project_id", COUNT(DISTINCT l."id")::int AS "count"
+      FROM "leads" l
+      JOIN "lead_project_interests" i ON i."organization_id" = l."organization_id" AND i."lead_id" = l."id"
+      WHERE ${leadWhere}
+        ${dims.projectId ? Prisma.sql`AND i."project_id" = ${dims.projectId}::uuid` : Prisma.empty}
+      GROUP BY 1`,
+    ctx.db.$queryRaw<{ project_id: string; visits: number; revisits: number }[]>`
+      SELECT v."project_id",
+        COUNT(*) FILTER (WHERE NOT v."is_revisit")::int AS "visits",
+        COUNT(*) FILTER (WHERE v."is_revisit")::int AS "revisits"
+      FROM "site_visits" v
+      WHERE v."organization_id" = ${org} AND v."status" = 'COMPLETED'
+        AND v."completed_at" >= ${start} AND v."completed_at" < ${end}
+        AND ${byMember(Prisma.sql`v."assigned_to_id"`)} ${projectFilter("v")}
+      GROUP BY 1`,
+    ctx.db.$queryRaw<
+      { project_id: string; bookings: number; closures: number; cancellations: number }[]
+    >`
+      SELECT b."project_id",
+        COUNT(*) FILTER (WHERE b."booking_date" >= ${filters.range.from}::date AND b."booking_date" <= ${filters.range.to}::date)::int AS "bookings",
+        COUNT(*) FILTER (WHERE b."status" = 'CLOSED_WON' AND b."closed_at" >= ${start} AND b."closed_at" < ${end})::int AS "closures",
+        COUNT(*) FILTER (WHERE b."status" = 'CANCELLED' AND b."cancelled_at" >= ${start} AND b."cancelled_at" < ${end})::int AS "cancellations"
+      FROM "bookings" b
+      WHERE b."organization_id" = ${org} AND ${byMember(Prisma.sql`b."executive_id"`)} ${projectFilter("b")}
+        AND ((b."booking_date" >= ${filters.range.from}::date AND b."booking_date" <= ${filters.range.to}::date)
+          OR (b."closed_at" >= ${start} AND b."closed_at" < ${end})
+          OR (b."cancelled_at" >= ${start} AND b."cancelled_at" < ${end}))
+      GROUP BY 1`,
+    ctx.db.project.findMany({
+      where: {
+        ...(dims.projectId ? { id: dims.projectId } : {}),
+        ...(dims.builderId ? { builderId: dims.builderId } : {}),
+      },
+      select: { id: true, name: true, builderId: true, builder: { select: { name: true } } },
+    }),
+  ]);
+  const rows = new Map<string, ProjectPerformance>();
+  const row = (projectId: string) => {
+    let entry = rows.get(projectId);
+    if (!entry) {
+      entry = {
+        projectId,
+        projectName: "",
+        builderId: "",
+        builderName: "",
+        interestedLeads: 0,
+        visits: 0,
+        revisits: 0,
+        bookings: 0,
+        closures: 0,
+        cancellations: 0,
+      };
+      rows.set(projectId, entry);
+    }
+    return entry;
+  };
+  for (const entry of interested) row(entry.project_id).interestedLeads = entry.count;
+  for (const entry of visits)
+    Object.assign(row(entry.project_id), { visits: entry.visits, revisits: entry.revisits });
+  for (const entry of bookings) {
+    Object.assign(row(entry.project_id), {
+      bookings: entry.bookings,
+      closures: entry.closures,
+      cancellations: entry.cancellations,
+    });
+  }
+  const known = new Map(projects.map((project) => [project.id, project]));
+  return [...rows.values()]
+    .filter((entry) => known.has(entry.projectId))
+    .map((entry) => {
+      const project = known.get(entry.projectId)!;
+      return {
+        ...entry,
+        projectName: project.name,
+        builderId: project.builderId,
+        builderName: project.builder.name,
+      };
+    })
     .filter(
-      (row) =>
-        row.interestedLeads +
-          row.visits +
-          row.revisits +
-          row.bookings +
-          row.closures +
-          row.cancellations >
+      (entry) =>
+        entry.interestedLeads +
+          entry.visits +
+          entry.revisits +
+          entry.bookings +
+          entry.closures +
+          entry.cancellations >
         0,
     )
     .sort(

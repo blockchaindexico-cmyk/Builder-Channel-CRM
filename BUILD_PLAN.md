@@ -948,8 +948,8 @@ organization dashboard — and deliver every report listed in the PRD with filte
 
 *Export & performance*
 - [x] **M10-18** CSV/XLSX export for every report; large exports run as background jobs with a notification + download link; exports audited.
-- [ ] **M10-19** Performance hardening: query plans reviewed, seeded load test (e.g. 200k leads, 2M activities), p95 targets for dashboards < 1.5 s.
-- [ ] **M10-20** Tests: golden-dataset metric tests, scope isolation per role, timezone/date-boundary tests.
+- [x] **M10-19** Performance hardening: query plans reviewed, seeded load test (e.g. 200k leads, 2M activities), p95 targets for dashboards < 1.5 s.
+- [x] **M10-20** Tests: golden-dataset metric tests, scope isolation per role, timezone/date-boundary tests.
 
 **Acceptance criteria**
 - Each role lands on a dashboard showing exactly the PRD §10/§13/§15 figures for its scope and selected period.

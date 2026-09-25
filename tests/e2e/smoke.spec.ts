@@ -122,6 +122,19 @@ test.describe("smoke", () => {
       "/reports/lost-opportunities",
       "/settings/billing",
       "/settings/commission",
+      // M10
+      "/dashboard?period=last_30_days",
+      "/profile?tab=performance",
+      "/reports",
+      "/reports/executives?group=team",
+      "/reports/calls",
+      "/reports/follow-ups",
+      "/reports/visits",
+      "/reports/bookings?group=month",
+      "/reports/lost",
+      "/reports/funnel",
+      "/reports/leads",
+      "/reports/exports",
     ];
     for (const path of paths) {
       await page.goto(path);

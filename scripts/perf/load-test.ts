@@ -59,6 +59,9 @@ async function seed(): Promise<string> {
   const existing = await prisma.organization.findUnique({ where: { slug: SLUG } });
   if (existing) {
     console.log("Reusing the existing load-test organization.");
+    if ((await prisma.dailyMemberStats.count({ where: { organizationId: existing.id } })) === 0) {
+      await fillStats(existing.id);
+    }
     return existing.id;
   }
   const started = performance.now();
@@ -206,17 +209,25 @@ async function seed(): Promise<string> {
   console.log(
     `Inserted in ${((performance.now() - started) / 1000).toFixed(0)} s; filling daily statistics…`,
   );
-  const today = new Date().toISOString().slice(0, 10);
-  const yearAgo = new Date(Date.now() - 366 * 86_400_000).toISOString().slice(0, 10);
-  const rows = await refreshDailyStats(db, orgId, {
-    from: yearAgo,
-    to: today,
-    timezone: "Asia/Kolkata",
-  });
+  const rows = await fillStats(orgId);
   console.log(
     `${rows} daily statistics rows in ${((performance.now() - started) / 1000).toFixed(0)} s total.`,
   );
   return orgId;
+}
+
+async function fillStats(orgId: string): Promise<number> {
+  const db = createTenantDb(orgId);
+  // A month at a time, like the nightly reconciliation (35 days).
+  let rows = 0;
+  for (let offset = 366; offset > 0; offset -= 30) {
+    const from = new Date(Date.now() - offset * 86_400_000).toISOString().slice(0, 10);
+    const to = new Date(Date.now() - Math.max(offset - 29, 0) * 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+    rows += await refreshDailyStats(db, orgId, { from, to, timezone: "Asia/Kolkata" });
+  }
+  return rows;
 }
 
 async function time(label: string, run: () => Promise<unknown>, repeat = 5) {
@@ -290,6 +301,12 @@ async function measure(orgId: string) {
       return getMetricSummary(ctx, { ...filters, projectId: project.id }, scope);
     });
     await time("  pipeline (leads now)", () => getPipeline(ctx, {}, scope));
+    await time("  series by day", () => getMetricSeries(ctx, filters, "day", scope));
+    await time("  per member", () => getMemberMetrics(ctx, filters, scope));
+    await time("  projects", () => getProjectPerformance(ctx, filters, scope));
+    await time("  agenda today", () => getAgendaToday(ctx, scope));
+    if (label === "organization")
+      await time("  sources", () => getSourcePerformance(ctx, filters, {}, scope));
     await time("  funnel", () => getFunnel(ctx, filters, scope));
     const report = await resolveReportParams(ctx, { period: "last_30_days", group: "project" });
     await time("  bookings report", () => bookingsReport(ctx, report));

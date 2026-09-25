@@ -11,3 +11,4 @@ New ADRs use the next number; superseded ADRs are kept and marked as such.
 | [0004](./0004-file-storage.md) | File storage via presigned S3 URLs | Accepted |
 | [0005](./0005-public-api.md) | Public API with API keys, idempotency and rate limits | Accepted |
 | [0006](./0006-notifications-engine.md) | Notifications & reminders engine | Accepted |
+| [0007](./0007-analytics.md) | Metrics, aggregates and exports | Accepted |

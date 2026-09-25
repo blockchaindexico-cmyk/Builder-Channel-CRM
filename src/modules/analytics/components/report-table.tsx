@@ -46,6 +46,7 @@ export function ReportTable({
             {report.columns.map((column) => (
               <TableHead
                 key={column.header}
+                scope="col"
                 className={cn(column.numeric && "text-right whitespace-nowrap")}
               >
                 {column.header}

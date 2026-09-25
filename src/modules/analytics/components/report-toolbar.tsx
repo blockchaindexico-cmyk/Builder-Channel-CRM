@@ -46,6 +46,7 @@ export function ReportToolbar({
   const router = useRouter();
   const pathname = usePathname();
   const search = useSearchParams();
+  const [menuOpen, setMenuOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
   const query = new URLSearchParams(search.toString());
@@ -55,7 +56,7 @@ export function ReportToolbar({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm">
             <Bookmark /> Views
@@ -69,7 +70,11 @@ export function ReportToolbar({
             views.map((view) => (
               <DropdownMenuItem key={view.id} className="justify-between" asChild>
                 <div>
-                  <Link href={`${pathname}?${view.query}`} className="flex-1 truncate">
+                  <Link
+                    href={`${pathname}?${view.query}`}
+                    className="flex-1 truncate"
+                    onClick={() => setMenuOpen(false)}
+                  >
                     {view.name}
                   </Link>
                   <button

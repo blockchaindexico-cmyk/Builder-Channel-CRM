@@ -270,35 +270,36 @@ export async function getPipeline(
   const now = new Date();
   const unworkedBefore = new Date(now.getTime() - unworkedHours * 3_600_000);
 
-  const [statusRows, [flags]] = await Promise.all([
+  // "Pending" reads the lead's next open follow-up (kept by the activities module: the earliest scheduled or missed
+  // one) and joins the few leads with an upcoming visit, instead of probing both tables for every open lead.
+  const [statusRows, [flags], [overdue]] = await Promise.all([
     ctx.db.$queryRaw<{ status_id: string; count: number }[]>`
       SELECT l."status_id", COUNT(*)::int AS "count"
       FROM "leads" l
       WHERE l."organization_id" = ${org} AND l."deleted_at" IS NULL AND l."duplicate_status" <> 'MERGED'
         AND ${owner} ${dimSql}
       GROUP BY 1`,
-    ctx.db.$queryRaw<{ pending: number; unworked: number; unassigned: number; overdue: number }[]>`
+    ctx.db.$queryRaw<{ pending: number; unworked: number; unassigned: number }[]>`
       SELECT
-        COUNT(*) FILTER (WHERE
-          EXISTS (SELECT 1 FROM "follow_ups" f WHERE f."organization_id" = l."organization_id" AND f."lead_id" = l."id"
-                  AND f."status" IN ('SCHEDULED', 'MISSED') AND f."due_at" < ${now})
-          OR NOT EXISTS (SELECT 1 FROM "follow_ups" f WHERE f."organization_id" = l."organization_id" AND f."lead_id" = l."id"
-                  AND f."status" = 'SCHEDULED')
-             AND NOT EXISTS (SELECT 1 FROM "site_visits" v WHERE v."organization_id" = l."organization_id" AND v."lead_id" = l."id"
-                  AND v."status" IN ('SCHEDULED', 'CONFIRMED') AND v."scheduled_at" >= ${now})
-        )::int AS "pending",
+        COUNT(*) FILTER (WHERE l."next_follow_up_at" < ${now}
+          OR (l."next_follow_up_at" IS NULL AND upcoming."lead_id" IS NULL))::int AS "pending",
         COUNT(*) FILTER (WHERE l."owner_id" IS NOT NULL AND l."owner_assigned_at" < ${unworkedBefore}
           AND l."last_activity_at" <= l."owner_assigned_at")::int AS "unworked",
-        COUNT(*) FILTER (WHERE l."owner_id" IS NULL)::int AS "unassigned",
-        (SELECT COUNT(*)::int FROM "follow_ups" f
-          JOIN "leads" fl ON fl."organization_id" = f."organization_id" AND fl."id" = f."lead_id"
-          WHERE f."organization_id" = ${org} AND f."status" IN ('SCHEDULED', 'MISSED') AND f."due_at" < ${now}
-            AND fl."deleted_at" IS NULL
-            AND ${members ? Prisma.sql`f."assigned_to_id" = ANY(${members}::uuid[])` : Prisma.sql`TRUE`}) AS "overdue"
+        COUNT(*) FILTER (WHERE l."owner_id" IS NULL)::int AS "unassigned"
       FROM "leads" l
       JOIN "lead_statuses" s ON s."organization_id" = l."organization_id" AND s."id" = l."status_id"
+      LEFT JOIN (
+        SELECT DISTINCT v."lead_id" FROM "site_visits" v
+        WHERE v."organization_id" = ${org} AND v."status" IN ('SCHEDULED', 'CONFIRMED') AND v."scheduled_at" >= ${now}
+      ) upcoming ON upcoming."lead_id" = l."id"
       WHERE l."organization_id" = ${org} AND l."deleted_at" IS NULL AND l."duplicate_status" <> 'MERGED'
         AND s."category" IN ('OPEN', 'ACTIVE', 'BOOKING') AND ${owner} ${dimSql}`,
+    ctx.db.$queryRaw<{ count: number }[]>`
+      SELECT COUNT(*)::int AS "count" FROM "follow_ups" f
+      WHERE f."organization_id" = ${org} AND f."status" IN ('SCHEDULED', 'MISSED') AND f."due_at" < ${now}
+        AND ${members ? Prisma.sql`f."assigned_to_id" = ANY(${members}::uuid[])` : Prisma.sql`TRUE`}
+        AND EXISTS (SELECT 1 FROM "leads" fl WHERE fl."organization_id" = f."organization_id" AND fl."id" = f."lead_id"
+          AND fl."deleted_at" IS NULL)`,
   ]);
   const statuses = await ctx.db.leadStatus.findMany({
     orderBy: { sortOrder: "asc" },
@@ -322,7 +323,7 @@ export async function getPipeline(
       .reduce((total, status) => total + status.count, 0),
     pending: flags?.pending ?? 0,
     unworked: flags?.unworked ?? 0,
-    overdueFollowUps: flags?.overdue ?? 0,
+    overdueFollowUps: overdue?.count ?? 0,
     unassigned: includeUnassigned ? (flags?.unassigned ?? 0) : null,
   };
 }

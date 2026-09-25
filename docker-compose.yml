@@ -5,6 +5,8 @@ services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+    # Parallel aggregate queries (reports, M10) need more than Docker's default 64 MB of shared memory.
+    shm_size: 256mb
     environment:
       POSTGRES_USER: crm
       POSTGRES_PASSWORD: crm

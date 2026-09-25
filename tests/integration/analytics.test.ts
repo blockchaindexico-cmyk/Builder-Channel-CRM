@@ -185,6 +185,11 @@ async function setup() {
     status: "RESCHEDULED",
   });
 
+  // What the activities module keeps on the lead: its earliest open (scheduled or missed) follow-up.
+  await prisma.lead.update({
+    where: { id: l1.id },
+    data: { nextFollowUpAt: new Date("2026-09-11T06:00:00Z") },
+  });
   const visit = (data: Record<string, unknown>) =>
     prisma.siteVisit.create({
       data: { organizationId: orgId, createdByName: "x", ...data } as never,

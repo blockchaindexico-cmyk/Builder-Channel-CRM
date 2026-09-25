@@ -158,6 +158,6 @@ curl -X POST http://localhost:3000/api/v1/leads \
 | M07 | Calls, Follow-ups & Callbacks | Done |
 | M08 | Site Visits, Revisits, Bookings & Closures | Done |
 | M09 | Billing, Commission & Profit/Loss | Done |
-| M10 | Dashboards, Reports & Analytics | Planned |
+| M10 | Dashboards, Reports & Analytics | Done |
 
 Live status: [`PROGRESS.md`](./PROGRESS.md).
