@@ -20,6 +20,7 @@ import {
   type LeadListOptions,
   type LeadView,
 } from "./leads";
+import { leadListFilterExtensions } from "./list-filters";
 
 /**
  * The lead list's URL (M04-12 → M04-14): view, search, sort, paging and filters. Parsed the same way for the list
@@ -49,6 +50,23 @@ export const loadLeadListParams = createLoader({
 
 export type LeadListParams = Awaited<ReturnType<typeof loadLeadListParams>>;
 
+/** Values of the filters other modules contribute (`lead.list.filter`), read from the same URL. */
+export async function loadLeadListExtras(
+  source:
+    | string
+    | URLSearchParams
+    | Record<string, string | string[] | undefined>
+    | Promise<Record<string, string | string[] | undefined>>,
+): Promise<Record<string, string>> {
+  const keys = leadListFilterExtensions().map((filter) => filter.key);
+  if (keys.length === 0) return {};
+  const load = createLoader(Object.fromEntries(keys.map((key) => [key, parseAsString])));
+  const values = await load(await source);
+  return Object.fromEntries(
+    Object.entries(values).filter((entry): entry is [string, string] => Boolean(entry[1])),
+  );
+}
+
 const range = (from: string | null, to: string | null) =>
   isIsoDate(from) && isIsoDate(to) ? { from, to } : null;
 
@@ -62,6 +80,7 @@ export interface LeadListRequest {
 export async function resolveLeadListRequest(
   ctx: ServiceContext,
   params: LeadListParams,
+  extras: Record<string, string> = {},
 ): Promise<LeadListRequest> {
   const [listOptions, regional] = await Promise.all([
     getLeadListOptions(ctx),
@@ -96,6 +115,7 @@ export async function resolveLeadListRequest(
         params.unworked && params.unworked > 0 ? Math.min(params.unworked, 24 * 90) : null,
       created: range(params.createdFrom, params.createdTo),
       lastActivity: range(params.activityFrom, params.activityTo),
+      extra: extras,
       timezone: regional.timezone,
     },
   };

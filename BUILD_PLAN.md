@@ -771,29 +771,29 @@ Upcoming + calendar), `/calls`, `/team/follow-ups`, `/settings/activities/*`.
 **Checklist**
 
 *Masters & settings*
-- [ ] **M07-01** Models & migrations, including denormalized lead fields.
-- [ ] **M07-02** Seed call outcomes (Positive, Negative, Unresponsive — no answer/busy/switched off/not reachable, Callback required, Interested, Not interested, Wrong number) and follow-up purposes.
-- [ ] **M07-03** Settings: outcomes & status mapping, purposes, reminder lead time, missed grace period, unresponsive threshold, "next action required after call".
+- [x] **M07-01** Models & migrations, including denormalized lead fields.
+- [x] **M07-02** Seed call outcomes (Positive, Negative, Unresponsive — no answer/busy/switched off/not reachable, Callback required, Interested, Not interested, Wrong number) and follow-up purposes.
+- [x] **M07-03** Settings: outcomes & status mapping, purposes, reminder lead time, missed grace period, unresponsive threshold, "next action required after call".
 
 *Calling*
-- [ ] **M07-04** Click-to-call (`tel:`) from lead header/list + "Log call" dialog (direction, time, duration, connected, outcome, notes).
-- [ ] **M07-05** Disposition flow: after a call → suggested status change + schedule follow-up/callback in one step.
-- [ ] **M07-06** Calls panel on lead (each call separately) + timeline entries; `/calls` list with filters (date, outcome, executive).
-- [ ] **M07-07** Status automation rules (first connected call, outcome mapping, unresponsive threshold).
-- [ ] **M07-08** Call recordings: upload/attach audio to a call; secure playback via short-lived presigned URL; permission + audit.
-- [ ] **M07-09** `TelephonyProvider` adapter interface (initiate call, webhook → CallLog, fetch recording) with a `MANUAL` implementation and webhook route stub.
+- [x] **M07-04** Click-to-call (`tel:`) from lead header/list + "Log call" dialog (direction, time, duration, connected, outcome, notes).
+- [x] **M07-05** Disposition flow: after a call → suggested status change + schedule follow-up/callback in one step.
+- [x] **M07-06** Calls panel on lead (each call separately) + timeline entries; `/calls` list with filters (date, outcome, executive).
+- [x] **M07-07** Status automation rules (first connected call, outcome mapping, unresponsive threshold).
+- [x] **M07-08** Call recordings: upload/attach audio to a call; secure playback via short-lived presigned URL; permission + audit.
+- [x] **M07-09** `TelephonyProvider` adapter interface (initiate call, webhook → CallLog, fetch recording) with a `MANUAL` implementation and webhook route stub.
 
 *Follow-ups & callbacks*
-- [ ] **M07-10** Schedule follow-up/callback (date, time, purpose, notes) from lead page and call dialog.
-- [ ] **M07-11** Complete (outcome, notes, optional next follow-up), reschedule (history chain), cancel (reason) — all in the timeline.
-- [ ] **M07-12** Missed-detection job (overdue beyond grace → MISSED) + overdue highlighting in every list.
-- [ ] **M07-13** Reminders via M06 (before due, at overdue) + manager alert rule for team overdue items.
-- [ ] **M07-14** "My Agenda": Overdue / Today / Upcoming tabs + week calendar; quick complete/reschedule.
-- [ ] **M07-15** Manager follow-up board: pending & overdue per executive with drill-down.
-- [ ] **M07-16** Lead list filters: follow-up status (due today, overdue, upcoming, none), pending callback, last call outcome, never contacted, call attempts.
-- [ ] **M07-17** Handle `lead.reassigned`: transfer open follow-ups/callbacks and re-target reminders.
-- [ ] **M07-18** Permissions (`calls.*`, `followups.*`, `activity_masters.manage`) + events (`call.logged`, `followup.scheduled|completed|missed|rescheduled|cancelled`).
-- [ ] **M07-19** Tests: disposition flow, status automation, missed job, reminder re-targeting on reassignment, recording access control.
+- [x] **M07-10** Schedule follow-up/callback (date, time, purpose, notes) from lead page and call dialog.
+- [x] **M07-11** Complete (outcome, notes, optional next follow-up), reschedule (history chain), cancel (reason) — all in the timeline.
+- [x] **M07-12** Missed-detection job (overdue beyond grace → MISSED) + overdue highlighting in every list.
+- [x] **M07-13** Reminders via M06 (before due, at overdue) + manager alert rule for team overdue items.
+- [x] **M07-14** "My Agenda": Overdue / Today / Upcoming tabs + week calendar; quick complete/reschedule.
+- [x] **M07-15** Manager follow-up board: pending & overdue per executive with drill-down.
+- [x] **M07-16** Lead list filters: follow-up status (due today, overdue, upcoming, none), pending callback, last call outcome, never contacted, call attempts.
+- [x] **M07-17** Handle `lead.reassigned`: transfer open follow-ups/callbacks and re-target reminders.
+- [x] **M07-18** Permissions (`calls.*`, `followups.*`, `activity_masters.manage`) + events (`call.logged`, `followup.scheduled|completed|missed|rescheduled|cancelled`).
+- [x] **M07-19** Tests: disposition flow, status automation, missed job, reminder re-targeting on reassignment, recording access control.
 
 **Acceptance criteria**
 - An executive can call, log the outcome, update status and schedule the next action in under 30 seconds.

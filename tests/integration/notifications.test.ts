@@ -496,7 +496,12 @@ describe("notifications & reminders engine (M06)", () => {
         link: `/leads?owner=${env.m.exec1}&open=true`,
       });
       const managerGroup = await prisma.notification.findFirstOrThrow({
-        where: { recipientId: env.m.manager, groupCount: 3, type: "team.lead_assigned" },
+        where: {
+          recipientId: env.m.manager,
+          groupCount: 3,
+          type: "team.lead_assigned",
+          idempotencyKey: { startsWith: "team.lead_assigned:group:" },
+        },
       });
       expect(managerGroup.title).toBe("3 leads assigned in your team");
       // The grouped e-mail waits for the count to settle.

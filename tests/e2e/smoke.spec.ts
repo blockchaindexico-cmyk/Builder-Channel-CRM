@@ -92,6 +92,13 @@ test.describe("smoke", () => {
       "/profile?tab=notifications",
       "/settings/notifications",
       "/settings/announcements",
+      // M07
+      "/agenda",
+      "/calls",
+      "/team/follow-ups",
+      "/settings/activities/outcomes",
+      "/settings/activities/purposes",
+      "/settings/activities/options",
     ];
     for (const path of paths) {
       await page.goto(path);

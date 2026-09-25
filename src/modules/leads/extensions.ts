@@ -1,5 +1,6 @@
 import type { ComponentType, ReactNode } from "react";
 
+import type { Prisma } from "@/generated/prisma/client";
 import type { LeadChannel } from "@/generated/prisma/enums";
 import type { TenantTx } from "@/platform/db/tenant-scope";
 import type { ServiceContext } from "@/platform/tenant/context";
@@ -15,6 +16,8 @@ import type { ServiceContext } from "@/platform/tenant/context";
  * - `lead.list.bulk-action`: extra bulk actions for selected leads (client components, via
  *   `src/modules/registry.client.ts`).
  * - `lead.created` (server): hooks run inside the transaction that creates a lead (M05 assigns it there).
+ * - `lead.list.filter` (server): extra filters of the lead list and its exports (M07 follow-up status, calls). Each
+ *   reads its own URL parameter; its options appear under "More filters".
  */
 export interface LeadDetailPanel {
   key: string;
@@ -94,5 +97,25 @@ declare module "@/platform/registry/client-ui" {
 declare module "@/platform/registry/server" {
   interface ServerExtensionMap {
     "lead.created": LeadCreatedHook;
+    "lead.list.filter": LeadListFilter;
   }
+}
+
+export interface LeadListFilterOption {
+  value: string;
+  label: string;
+}
+
+export interface LeadListFilter {
+  /** URL parameter, e.g. "followUp" — must not clash with the list's own parameters. */
+  key: string;
+  label: string;
+  order: number;
+  /** Choices offered to this person (none = the filter is not shown). */
+  options(ctx: ServiceContext): Promise<LeadListFilterOption[]> | LeadListFilterOption[];
+  /** Condition for a chosen value; null ignores an unknown value. */
+  where(
+    value: string,
+    context: { ctx: ServiceContext; timezone: string; now: Date },
+  ): Promise<Prisma.LeadWhereInput | null> | Prisma.LeadWhereInput | null;
 }

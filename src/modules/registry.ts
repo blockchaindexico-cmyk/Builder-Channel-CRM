@@ -1,6 +1,7 @@
 import { composeRegistry } from "@/platform/registry/compose";
 import type { ModuleManifest } from "@/platform/registry/types";
 
+import { activitiesManifest } from "./activities/manifest";
 import { assignmentManifest } from "./assignment/manifest";
 import { catalogManifest } from "./catalog/manifest";
 import { coreManifest } from "./core/manifest";
@@ -21,6 +22,7 @@ export const moduleManifests: readonly ModuleManifest[] = [
   leadsManifest,
   assignmentManifest,
   notificationsManifest,
+  activitiesManifest,
 ];
 
 export const appRegistry = composeRegistry(moduleManifests);

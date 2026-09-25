@@ -44,6 +44,10 @@ model Organization {
   notifications       Notification[]
   scheduledReminders  ScheduledReminder[]
   announcements       Announcement[]
+  callOutcomes        CallOutcome[]
+  callLogs            CallLog[]
+  followUpPurposes    FollowUpPurpose[]
+  followUps           FollowUp[]
 
   @@map("organizations")
 }
@@ -177,6 +181,7 @@ model FileObject {
   projectFiles ProjectFile[]
   builderFiles BuilderFile[]
   leadFiles    LeadFile[]
+  callLogs     CallLog[]
 
   @@unique([organizationId, id])
   @@index([organizationId, purpose, createdAt(sort: Desc)])

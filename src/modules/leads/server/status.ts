@@ -136,6 +136,8 @@ export async function changeLeadStatus(
 /**
  * Status change driven by another module's workflow (M05 assignment, M07 calls, M08 visits/bookings): addresses
  * the status by its system key and skips the manual-override rule. Call it inside that module's transaction.
+ * With `workflow: false` the change counts as the person's own choice (e.g. picked in M07's call dialog), so the
+ * manual rules apply: workflow statuses need `leads.status_override`.
  */
 export async function setLeadStatusByKey(
   tx: TenantDbOrTx,
@@ -143,18 +145,23 @@ export async function setLeadStatusByKey(
   leadId: string,
   key: string,
   reason?: string | null,
+  options: { workflow?: boolean } = {},
 ) {
-  const [lead, status] = await Promise.all([
-    tx.lead.findFirst({
-      where: { id: leadId, deletedAt: null },
-      select: { id: true, number: true, statusId: true },
-    }),
-    tx.leadStatus.findFirst({ where: { key }, select: { id: true } }),
-  ]);
+  const lead = await tx.lead.findFirst({
+    where: { id: leadId, deletedAt: null },
+    select: { id: true, number: true, statusId: true },
+  });
+  const status = await tx.leadStatus.findFirst({ where: { key }, select: { id: true } });
   if (!lead) throw new NotFoundError("Lead", leadId);
   if (!status) throw new NotFoundError("Lead status", key);
   if (lead.statusId === status.id) return null;
-  return applyStatusChange(tx, ctx, lead, { statusId: status.id, reason }, { workflow: true });
+  return applyStatusChange(
+    tx,
+    ctx,
+    lead,
+    { statusId: status.id, reason },
+    { workflow: options.workflow ?? true },
+  );
 }
 
 /** Bulk status change (M04-15): each lead is checked individually; failures are reported, not fatal. */

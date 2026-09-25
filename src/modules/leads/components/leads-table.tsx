@@ -4,7 +4,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { Contact, ListFilter, X } from "lucide-react";
 import Link from "next/link";
 import { parseAsBoolean, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
-import { type ReactNode, useTransition } from "react";
+import { type ReactNode, useMemo, useTransition } from "react";
 
 import { DataTable, DataTableColumnHeader, DataTableToolbar } from "@/components/shared/data-table";
 import { DateRangePicker } from "@/components/shared/date-range-picker";
@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatPhone } from "@/lib/phone";
+import { cn } from "@/lib/utils";
 import { clientUiRegistry } from "@/modules/registry.client";
 
 import { STATUS_CATEGORIES, TEMPERATURES } from "../constants";
@@ -43,6 +44,8 @@ export interface LeadListOptions {
   managers: { membershipId: string; name: string }[];
   projects: { id: string; name: string; builderName: string }[];
   builders: { id: string; name: string }[];
+  /** Filters contributed by other modules (`lead.list.filter`), each with its own URL parameter. */
+  extraFilters?: { key: string; label: string; options: { value: string; label: string }[] }[];
 }
 
 const filterParsers = {
@@ -107,6 +110,7 @@ export function LeadsTable({
   canExport = false,
   statusPermissions,
   importBatch,
+  now,
 }: {
   rows: LeadRow[];
   total: number;
@@ -116,6 +120,8 @@ export function LeadsTable({
   statusPermissions: StatusPermissions;
   /** The import the list is filtered by (`?import=`), for its filter chip. */
   importBatch?: { id: string; fileName: string } | null;
+  /** Rendering time from the server, so overdue follow-ups look the same on server and browser. */
+  now: string;
 }) {
   const format = useFormatters();
   const bulkActions = clientUiRegistry
@@ -125,6 +131,23 @@ export function LeadsTable({
   const [filters, setFilters] = useQueryStates(filterParsers, { shallow: false, startTransition });
   type Patch = Exclude<Parameters<typeof setFilters>[0], ((...args: never[]) => unknown) | null>;
   const set = (patch: Patch) => void setFilters({ ...patch, page: null });
+  const extraFilters = options.extraFilters ?? [];
+  const extraKeys = extraFilters.map((filter) => filter.key).join(",");
+  const extraParsers = useMemo(
+    () =>
+      Object.fromEntries(
+        extraKeys
+          .split(",")
+          .filter(Boolean)
+          .map((key) => [key, parseAsString]),
+      ),
+    [extraKeys],
+  );
+  const [extra, setExtra] = useQueryStates(extraParsers, { shallow: false, startTransition });
+  const setExtraFilter = (key: string, value: string | null) => {
+    void setExtra({ [key]: value });
+    void setFilters({ page: null });
+  };
 
   const statusChoices = options.statuses.map((status) => ({
     value: status.id,
@@ -179,7 +202,17 @@ export function LeadsTable({
       label: `Temperature: ${TEMPERATURES.find((entry) => entry.value === filters.temperature)?.label ?? filters.temperature}`,
     });
   if (filters.tag) active.push({ key: "tag", label: `Tag: ${filters.tag}` });
-  const moreCount = active.length + (filters.createdFrom ? 1 : 0) + (filters.activityFrom ? 1 : 0);
+  const activeExtra = extraFilters.flatMap((filter) => {
+    const value = extra[filter.key];
+    if (!value) return [];
+    const option = filter.options.find((entry) => entry.value === value);
+    return [{ key: filter.key, label: `${filter.label}: ${option?.label ?? value}` }];
+  });
+  const moreCount =
+    active.length +
+    activeExtra.length +
+    (filters.createdFrom ? 1 : 0) +
+    (filters.activityFrom ? 1 : 0);
   if (filters.open) active.push({ key: "open", label: "Open leads only" });
   if (filters.unworked) {
     active.push({
@@ -217,7 +250,13 @@ export function LeadsTable({
       header: "Contact",
       cell: ({ row }) => (
         <div className="flex flex-col text-sm">
-          <span>{row.original.mobile ? formatPhone(row.original.mobile) : "—"}</span>
+          {row.original.mobile ? (
+            <a href={`tel:${row.original.mobile}`} className="hover:underline" title="Call">
+              {formatPhone(row.original.mobile)}
+            </a>
+          ) : (
+            <span>—</span>
+          )}
           {row.original.email ? (
             <span className="text-xs text-muted-foreground">{row.original.email}</span>
           ) : null}
@@ -232,6 +271,23 @@ export function LeadsTable({
       cell: ({ row }) => (
         <LeadStatusBadge label={row.original.status.label} color={row.original.status.color} />
       ),
+    },
+    {
+      id: "nextFollowUpAt",
+      accessorKey: "nextFollowUpAt",
+      meta: { label: "Next follow-up" },
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Next follow-up" />,
+      cell: ({ row }) => {
+        const due = row.original.nextFollowUpAt;
+        if (!due) return <span className="text-muted-foreground">—</span>;
+        const overdue = new Date(due).getTime() < new Date(now).getTime();
+        return (
+          <span className={cn("whitespace-nowrap", overdue && "font-medium text-destructive")}>
+            {format.dateTime(due)}
+            {overdue ? <span className="ml-1 text-xs">(overdue)</span> : null}
+          </span>
+        );
+      },
     },
     {
       id: "owner",
@@ -475,6 +531,19 @@ export function LeadsTable({
                       />
                     </div>
                   ) : null}
+                  {extraFilters.map((filter) => (
+                    <div key={filter.key} className="grid gap-1.5">
+                      <Label className="text-xs">{filter.label}</Label>
+                      <FilterSelect
+                        label={`Filter by ${filter.label.toLowerCase()}`}
+                        value={extra[filter.key] ?? null}
+                        onChange={(value) => setExtraFilter(filter.key, value)}
+                        choices={filter.options}
+                        allLabel="Any"
+                        className="w-full"
+                      />
+                    </div>
+                  ))}
                   <div className="grid gap-1.5">
                     <Label className="text-xs" htmlFor="lead-tag-filter">
                       Tag
@@ -523,7 +592,7 @@ export function LeadsTable({
               </PopoverContent>
             </Popover>
           </DataTableToolbar>
-          {active.length ? (
+          {active.length || activeExtra.length ? (
             <div className="flex flex-wrap items-center gap-1.5">
               {active.map((entry) => (
                 <Badge key={entry.key} variant="secondary" className="gap-1 pr-1">
@@ -533,6 +602,19 @@ export function LeadsTable({
                     aria-label={`Remove filter ${entry.label}`}
                     className="rounded-sm hover:bg-foreground/10"
                     onClick={() => set({ [entry.key]: null } as Patch)}
+                  >
+                    <X className="size-3" />
+                  </button>
+                </Badge>
+              ))}
+              {activeExtra.map((entry) => (
+                <Badge key={entry.key} variant="secondary" className="gap-1 pr-1">
+                  {entry.label}
+                  <button
+                    type="button"
+                    aria-label={`Remove filter ${entry.label}`}
+                    className="rounded-sm hover:bg-foreground/10"
+                    onClick={() => setExtraFilter(entry.key, null)}
                   >
                     <X className="size-3" />
                   </button>

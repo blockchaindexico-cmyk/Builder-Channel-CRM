@@ -173,6 +173,8 @@ model Membership {
   notificationPreferences NotificationPreference[] @relation("NotificationPreferenceMember")
   reminders               ScheduledReminder[]      @relation("ReminderRecipient")
   announcementReads       AnnouncementRead[]       @relation("AnnouncementReader")
+  callsMade               CallLog[]                @relation("CallCaller")
+  followUpsAssigned       FollowUp[]               @relation("FollowUpAssignee")
 
   @@unique([organizationId, userId])
   @@unique([organizationId, id])

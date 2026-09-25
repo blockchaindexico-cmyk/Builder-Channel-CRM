@@ -1,5 +1,10 @@
 /** Public API of lead management (M04). Other modules import only from here. */
-export { LEAD_ACTIVITY_TYPES, LEAD_STATUS_KEYS, STATUS_CATEGORIES } from "./constants";
+export {
+  LEAD_ACTIVITY_TYPES,
+  LEAD_STATUS_KEYS,
+  STATUS_CATEGORIES,
+  SYSTEM_DRIVEN_STATUS_KEYS,
+} from "./constants";
 export type {
   LeadActionTarget,
   LeadBulkAction,
@@ -7,10 +12,13 @@ export type {
   LeadCreatedHookInput,
   LeadDetailAction,
   LeadDetailPanel,
+  LeadListFilter,
+  LeadListFilterOption,
   LeadTimelineRenderer,
 } from "./extensions";
 export { leadsManifest } from "./manifest";
 export { LEAD_PERMISSIONS } from "./permissions";
+export { type LeadEngagement, setLeadEngagement } from "./server/engagement";
 export {
   assertLeadVisible,
   LEAD_SORTABLE_FIELDS,
@@ -18,7 +26,13 @@ export {
   type LeadRow,
   listLeads,
 } from "./server/leads";
-export { listCampaigns, listLeadSources, seedLeadMasters } from "./server/masters";
+export {
+  type LeadStatusRow,
+  listCampaigns,
+  listLeadSources,
+  listLeadStatuses,
+  seedLeadMasters,
+} from "./server/masters";
 export { setLeadOwner } from "./server/owner";
 export { findVisibleLead, isLeadInScope, leadScopeWhere } from "./server/scope";
 export {

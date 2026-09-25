@@ -29,6 +29,7 @@ import {
   updateLeadSchema,
   type UpdateLeadValues,
 } from "../schemas";
+import { leadListFilterExtensions } from "./list-filters";
 import {
   contactNumberErrors,
   leadNumberSearch,
@@ -791,6 +792,8 @@ export async function getLead(ctx: ServiceContext, leadId: string) {
     filesCount: lead._count.files,
     statusChangedAt: lead.statusChangedAt.toISOString(),
     lastActivityAt: lead.lastActivityAt.toISOString(),
+    nextFollowUpAt: lead.nextFollowUpAt?.toISOString() ?? null,
+    lastContactedAt: lead.lastContactedAt?.toISOString() ?? null,
     closedAt: lead.closedAt?.toISOString() ?? null,
     createdAt: lead.createdAt.toISOString(),
     updatedAt: lead.updatedAt.toISOString(),
@@ -826,6 +829,8 @@ export interface LeadFilters {
   created?: DateRange | null;
   updated?: DateRange | null;
   lastActivity?: DateRange | null;
+  /** Values of filters contributed by other modules, by key (`lead.list.filter`). */
+  extra?: Record<string, string> | null;
   timezone: string;
 }
 
@@ -833,6 +838,7 @@ export const LEAD_SORTABLE_FIELDS = [
   "createdAt",
   "lastActivityAt",
   "name",
+  "nextFollowUpAt",
   "number",
   "statusChangedAt",
 ] as const;
@@ -854,6 +860,9 @@ export interface LeadRow {
   tags: string[];
   duplicateStatus: DuplicateStatus;
   lastActivityAt: string;
+  /** Earliest open follow-up or callback and the last time the customer was reached (kept by M07). */
+  nextFollowUpAt: string | null;
+  lastContactedAt: string | null;
   createdAt: string;
 }
 
@@ -925,6 +934,15 @@ export async function buildLeadWhere(
   if (filters.updated) and.push({ updatedAt: toUtcBounds(filters.updated, filters.timezone) });
   if (filters.lastActivity)
     and.push({ lastActivityAt: toUtcBounds(filters.lastActivity, filters.timezone) });
+  if (filters.extra) {
+    const now = new Date();
+    for (const filter of leadListFilterExtensions()) {
+      const value = filters.extra[filter.key];
+      if (!value) continue;
+      const where = await filter.where(value, { ctx, timezone: filters.timezone, now });
+      if (where) and.push(where);
+    }
+  }
 
   const q = query.q?.trim();
   if (q) {
@@ -962,7 +980,9 @@ export async function listLeads(
           ? [{ lastActivityAt: direction }]
           : query.sort?.field === "statusChangedAt"
             ? [{ statusChangedAt: direction }]
-            : [{ createdAt: direction }, { number: direction }];
+            : query.sort?.field === "nextFollowUpAt"
+              ? [{ nextFollowUpAt: { sort: direction, nulls: "last" } }, { number: direction }]
+              : [{ createdAt: direction }, { number: direction }];
   const [leads, total] = await Promise.all([
     ctx.db.lead.findMany({
       where,
@@ -1000,6 +1020,8 @@ export async function listLeads(
       tags: lead.tags,
       duplicateStatus: lead.duplicateStatus,
       lastActivityAt: lead.lastActivityAt.toISOString(),
+      nextFollowUpAt: lead.nextFollowUpAt?.toISOString() ?? null,
+      lastContactedAt: lead.lastContactedAt?.toISOString() ?? null,
       createdAt: lead.createdAt.toISOString(),
     })),
   };
@@ -1021,7 +1043,16 @@ export async function getLeadListOptions(ctx: ServiceContext) {
       : scope.scope === "TEAM"
         ? ["team", "my", "unassigned", "duplicates"]
         : ["my"];
-  return { owners, managers, views, scope: scope.scope };
+  const extraFilters = (
+    await Promise.all(
+      leadListFilterExtensions().map(async (filter) => ({
+        key: filter.key,
+        label: filter.label,
+        options: await filter.options(ctx),
+      })),
+    )
+  ).filter((filter) => filter.options.length > 0);
+  return { owners, managers, views, scope: scope.scope, extraFilters };
 }
 export type LeadListOptions = Awaited<ReturnType<typeof getLeadListOptions>>;
 

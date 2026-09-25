@@ -53,7 +53,10 @@ test.describe("catalogue as admin", () => {
     await page.getByTestId("project-document-input").setInputFiles(fixture("brochure.pdf"));
     await page.getByRole("dialog").getByRole("button", { name: "Upload" }).click();
     await expect(page.getByText("brochure uploaded")).toBeVisible();
-    await expect(page.getByRole("listitem").filter({ hasText: "Brochure" })).toBeVisible();
+    // Scoped to the tab: the "uploaded" toast is a list item too.
+    await expect(
+      page.getByRole("tabpanel").getByRole("listitem").filter({ hasText: "Brochure" }),
+    ).toBeVisible();
 
     await page.getByRole("combobox", { name: "Project status" }).click();
     await page.getByRole("option", { name: "Pre-launch" }).click();

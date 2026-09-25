@@ -1,0 +1,165 @@
+// M07 — Calls, follow-ups & callbacks (BUILD_PLAN M07).
+
+enum CallDirection {
+  OUTBOUND
+  INBOUND
+}
+
+enum CallOutcomeCategory {
+  POSITIVE
+  NEGATIVE
+  UNRESPONSIVE
+  CALLBACK
+  INTERESTED
+  NOT_INTERESTED
+  NEUTRAL
+}
+
+enum FollowUpType {
+  FOLLOW_UP
+  /// Requested by the customer (PRD §9: shown separately).
+  CALLBACK
+}
+
+enum FollowUpStatus {
+  SCHEDULED
+  COMPLETED
+  /// Overdue beyond the grace period and still to be done (completing it later keeps `missedAt`).
+  MISSED
+  CANCELLED
+  /// Moved to a new time: the next item of the chain points back here.
+  RESCHEDULED
+}
+
+/// Result of a call (master data): how it counts and what it suggests for the lead.
+model CallOutcome {
+  id                 String              @id @default(uuid(7)) @db.Uuid
+  organizationId     String              @map("organization_id") @db.Uuid
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// Key of a seeded outcome (null for outcomes added by the organization).
+  key                String?
+  label              String
+  category           CallOutcomeCategory
+  /// The customer was reached: resets unanswered attempts; the first one moves a new lead to Contacted.
+  connected          Boolean
+  /// Lead status key suggested after this outcome, e.g. "POSITIVE".
+  suggestedStatusKey String?             @map("suggested_status_key")
+  /// A follow-up or callback must be scheduled with this outcome while the lead stays open.
+  requiresNextAction Boolean             @default(false) @map("requires_next_action")
+  /// Kind of next action offered first after this outcome.
+  nextActionType     FollowUpType?       @map("next_action_type")
+  isActive           Boolean             @default(true) @map("is_active")
+  sortOrder          Int                 @default(0) @map("sort_order")
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  calls CallLog[]
+  leads Lead[]    @relation("LeadLastCallOutcome")
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, label])
+  @@unique([organizationId, key])
+  @@map("call_outcomes")
+}
+
+/// One call with a customer (PRD §8): each call is its own record, never overwritten.
+model CallLog {
+  id              String        @id @default(uuid(7)) @db.Uuid
+  organizationId  String        @map("organization_id") @db.Uuid
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leadId          String        @map("lead_id") @db.Uuid
+  lead            Lead          @relation(fields: [organizationId, leadId], references: [organizationId, id], onDelete: Cascade)
+  /// Member who made or took the call (null when a telephony provider reports a call no member matches).
+  callerId        String?       @map("caller_id") @db.Uuid
+  caller          Membership?   @relation("CallCaller", fields: [organizationId, callerId], references: [organizationId, id], onDelete: Restrict)
+  callerName      String        @map("caller_name")
+  direction       CallDirection
+  startedAt       DateTime      @map("started_at") @db.Timestamptz(3)
+  durationSeconds Int           @default(0) @map("duration_seconds")
+  connected       Boolean
+  outcomeId       String        @map("outcome_id") @db.Uuid
+  outcome         CallOutcome   @relation(fields: [organizationId, outcomeId], references: [organizationId, id], onDelete: Restrict)
+  notes           String?
+  recordingFileId String?       @map("recording_file_id") @db.Uuid
+  recording       FileObject?   @relation(fields: [organizationId, recordingFileId], references: [organizationId, id], onDelete: Restrict)
+  /// "MANUAL" for calls logged by hand, else the telephony provider key.
+  provider        String        @default("MANUAL")
+  providerCallId  String?       @map("provider_call_id")
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  scheduledFollowUps FollowUp[] @relation("FollowUpSourceCall")
+  completedFollowUps FollowUp[] @relation("FollowUpCompletedCall")
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, provider, providerCallId])
+  @@unique([organizationId, recordingFileId])
+  @@index([organizationId, leadId, startedAt(sort: Desc)])
+  @@index([organizationId, callerId, startedAt(sort: Desc)])
+  @@index([organizationId, startedAt(sort: Desc)])
+  @@map("call_logs")
+}
+
+/// Why a follow-up is scheduled (master data), e.g. "Share brochure", "Discuss price".
+model FollowUpPurpose {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  label          String
+  isActive       Boolean      @default(true) @map("is_active")
+  sortOrder      Int          @default(0) @map("sort_order")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  followUps FollowUp[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, label])
+  @@map("follow_up_purposes")
+}
+
+/// A follow-up or a customer-requested callback (PRD §9). Completed, missed, cancelled and rescheduled items stay.
+model FollowUp {
+  id                String           @id @default(uuid(7)) @db.Uuid
+  organizationId    String           @map("organization_id") @db.Uuid
+  organization      Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leadId            String           @map("lead_id") @db.Uuid
+  lead              Lead             @relation(fields: [organizationId, leadId], references: [organizationId, id], onDelete: Cascade)
+  type              FollowUpType
+  status            FollowUpStatus   @default(SCHEDULED)
+  /// Who has to do it: the lead owner (moves with the lead), null while the lead is unassigned.
+  assignedToId      String?          @map("assigned_to_id") @db.Uuid
+  assignedTo        Membership?      @relation("FollowUpAssignee", fields: [organizationId, assignedToId], references: [organizationId, id], onDelete: Restrict)
+  dueAt             DateTime         @map("due_at") @db.Timestamptz(3)
+  purposeId         String?          @map("purpose_id") @db.Uuid
+  purpose           FollowUpPurpose? @relation(fields: [organizationId, purposeId], references: [organizationId, id], onDelete: Restrict)
+  notes             String?
+  createdById       String?          @map("created_by_id") @db.Uuid
+  createdByName     String           @map("created_by_name")
+  /// Call during which it was scheduled.
+  sourceCallId      String?          @map("source_call_id") @db.Uuid
+  sourceCall        CallLog?         @relation("FollowUpSourceCall", fields: [organizationId, sourceCallId], references: [organizationId, id], onDelete: Restrict)
+  completedAt       DateTime?        @map("completed_at") @db.Timestamptz(3)
+  completedById     String?          @map("completed_by_id") @db.Uuid
+  completedByName   String?          @map("completed_by_name")
+  completionNotes   String?          @map("completion_notes")
+  /// Call that completed it.
+  completedCallId   String?          @map("completed_call_id") @db.Uuid
+  completedCall     CallLog?         @relation("FollowUpCompletedCall", fields: [organizationId, completedCallId], references: [organizationId, id], onDelete: Restrict)
+  missedAt          DateTime?        @map("missed_at") @db.Timestamptz(3)
+  cancelledAt       DateTime?        @map("cancelled_at") @db.Timestamptz(3)
+  cancelReason      String?          @map("cancel_reason")
+  /// Previous item of a reschedule chain.
+  rescheduledFromId String?          @map("rescheduled_from_id") @db.Uuid
+  rescheduledFrom   FollowUp?        @relation("FollowUpChain", fields: [organizationId, rescheduledFromId], references: [organizationId, id], onDelete: Restrict)
+  rescheduledTo     FollowUp?        @relation("FollowUpChain")
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, rescheduledFromId])
+  @@index([organizationId, assignedToId, status, dueAt])
+  @@index([organizationId, leadId, dueAt])
+  @@index([status, dueAt])
+  @@map("follow_ups")
+}

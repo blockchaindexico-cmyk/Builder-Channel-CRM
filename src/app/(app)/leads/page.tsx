@@ -10,7 +10,11 @@ import { LeadViewsBar } from "@/modules/leads/components/lead-views-bar";
 import { LeadsTable } from "@/modules/leads/components/leads-table";
 import { getImportBatch } from "@/modules/leads/server/import/service";
 import { listLeads } from "@/modules/leads/server/leads";
-import { loadLeadListParams, resolveLeadListRequest } from "@/modules/leads/server/list-query";
+import {
+  loadLeadListExtras,
+  loadLeadListParams,
+  resolveLeadListRequest,
+} from "@/modules/leads/server/list-query";
 import { getLeadFormOptions } from "@/modules/leads/server/masters";
 import { loadCatalogFilterOptions, statusPermissions } from "@/modules/leads/server/page-data";
 import { listSavedViews } from "@/modules/leads/server/views";
@@ -24,8 +28,11 @@ export const metadata: Metadata = { title: "Leads" };
 export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
   const ctx = await getRequestContext();
   requirePermission(ctx, LEAD_PERMISSIONS.view);
-  const params = await loadLeadListParams(searchParams);
-  const { view, query, filters, listOptions } = await resolveLeadListRequest(ctx, params);
+  const [params, extras] = await Promise.all([
+    loadLeadListParams(searchParams),
+    loadLeadListExtras(searchParams),
+  ]);
+  const { view, query, filters, listOptions } = await resolveLeadListRequest(ctx, params, extras);
   const canImport = ctx.permissions.has(LEAD_PERMISSIONS.import);
   const [leads, formOptions, catalog, savedViews, importBatch] = await Promise.all([
     listLeads(ctx, query, filters),
@@ -78,6 +85,7 @@ export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
           canExport={ctx.permissions.has(LEAD_PERMISSIONS.export)}
           importBatch={importBatch ? { id: importBatch.id, fileName: importBatch.fileName } : null}
           statusPermissions={statusPermissions(ctx)}
+          now={new Date().toISOString()}
           options={{
             statuses: formOptions.statuses,
             sources: formOptions.sources,
@@ -86,6 +94,7 @@ export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
             managers: listOptions.managers,
             projects: catalog.projects,
             builders: catalog.builders,
+            extraFilters: listOptions.extraFilters,
           }}
         />
       </div>

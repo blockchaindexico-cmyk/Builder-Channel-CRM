@@ -14,7 +14,7 @@ import { LEAD_PERMISSIONS } from "../permissions";
 import { type ExportRequestInput, exportRequestSchema, MAX_EXPORT_ROWS } from "../schemas";
 import { CSV_TYPE, writeCsv, writeXlsx, XLSX_TYPE, type XlsxColumn } from "./import/spreadsheet";
 import { buildLeadWhere } from "./leads";
-import { loadLeadListParams, resolveLeadListRequest } from "./list-query";
+import { loadLeadListExtras, loadLeadListParams, resolveLeadListRequest } from "./list-query";
 import { leadScopeWhere } from "./scope";
 
 /**
@@ -101,7 +101,11 @@ export async function exportLeads(
     where = { AND: [await leadScopeWhere(ctx), { id: { in: ids } }] };
     scopeDescription = { selected: ids.length };
   } else {
-    const request = await resolveLeadListRequest(ctx, await loadLeadListParams(query ?? ""));
+    const request = await resolveLeadListRequest(
+      ctx,
+      await loadLeadListParams(query ?? ""),
+      await loadLeadListExtras(query ?? ""),
+    );
     where = await buildLeadWhere(ctx, request.query, request.filters);
     scopeDescription = { view: request.view, query: query ?? "" };
   }

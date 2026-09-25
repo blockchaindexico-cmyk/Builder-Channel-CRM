@@ -9,6 +9,7 @@
  * 4. Demo manager, executives, builders and projects when SEED_DEMO_USERS=true (never in production).
  */
 import { env } from "@/config/env";
+import { seedActivityMasters } from "@/modules/activities/server/masters";
 import { seedAssignmentMasters } from "@/modules/assignment/server/reasons";
 import { seedCatalogMasters } from "@/modules/catalog/server/masters";
 import { syncSystemRoles } from "@/modules/identity/server/roles";
@@ -46,6 +47,7 @@ async function syncRolesForAllOrganizations() {
     await seedCatalogMasters(db, organization.id);
     await seedLeadMasters(db, organization.id);
     await seedAssignmentMasters(db, organization.id);
+    await seedActivityMasters(db, organization.id);
   }
   console.log(
     `✔ system roles, catalogue and lead masters synced for ${organizations.length} organization(s)`,
