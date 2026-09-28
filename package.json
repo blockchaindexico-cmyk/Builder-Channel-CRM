@@ -76,7 +76,7 @@
     "@commitlint/config-conventional": "^21.2.3",
     "@playwright/test": "1.56.1",
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^22",
+    "@types/node": "^26",
     "@types/nodemailer": "^8.0.2",
     "@types/papaparse": "^5.5.2",
     "@types/pg": "^8.23.1",
