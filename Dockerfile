@@ -4,7 +4,7 @@
 #   docker build --target worker  -t crm-worker .   → background worker (single self-contained bundle)
 #   docker build --target migrate -t crm-migrate .  → one-off release tasks: `pnpm db:deploy` (default), `pnpm db:seed`
 
-FROM node:22-alpine AS base
+FROM node:26-alpine AS base
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH NEXT_TELEMETRY_DISABLED=1 COREPACK_HOME=/corepack
 # Pin pnpm into a shared Corepack home so no user needs network access to run pnpm at runtime.
 RUN corepack enable && corepack prepare pnpm@10.33.0 --activate && chmod -R a+rX /corepack
@@ -38,7 +38,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
 CMD ["node", "server.js"]
 
 # The worker is a single self-contained esbuild bundle: no node_modules needed at runtime.
-FROM node:22-alpine AS worker
+FROM node:26-alpine AS worker
 ENV NODE_ENV=production SERVICE_NAME=worker
 WORKDIR /app
 COPY --from=build --chown=node:node /app/dist/worker ./dist/worker
